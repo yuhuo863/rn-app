@@ -1,0 +1,42 @@
+import { use, createContext } from 'react'
+
+import { useStorageState } from '@/hooks/useStorageState'
+
+const AuthContext = createContext({
+  signIn: () => null,
+  signOut: () => null,
+  session: null,
+  isLoading: false,
+})
+
+// 使用这个钩子来获取用户信息
+export function useSession() {
+  const value = use(AuthContext)
+  if (!value) {
+    throw new Error('useSession 必须包裹在 <SessionProvider /> 里')
+  }
+
+  return value
+}
+
+export function SessionProvider({ children }) {
+  const [[isLoading, session], setSession] = useStorageState('session')
+
+  return (
+    <AuthContext.Provider
+      value={{
+        signIn: () => {
+          // 在这里实现登录逻辑
+          setSession('xxx')
+        },
+        signOut: () => {
+          setSession(null)
+        },
+        session,
+        isLoading,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
+}
