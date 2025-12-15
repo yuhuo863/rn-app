@@ -9,7 +9,7 @@ export default function Loading() {
 
 const styles = StyleSheet.create({
   loading: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, .8)',
     position: 'absolute',
     top: 0,
     left: 0,

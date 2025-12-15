@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { Link } from 'expo-router'
 
-export default function Index() {
+export default function Categories() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>这里是分类页面</Text>

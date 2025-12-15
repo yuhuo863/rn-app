@@ -3,3 +3,6 @@ TODO：
 各个tab页布局
 登录认证
 ...
+[zustand](https://zustand.docs.pmnd.rs/getting-started/introduction)
+
+[react-native](https://reactnative.dev/docs/flatlist)

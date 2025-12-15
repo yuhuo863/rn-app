@@ -20,7 +20,7 @@ export default function TabLayout() {
           <Icon sf={{ default: 'key', selected: 'key.fill' }} />
           <Label>全部</Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger name="categories">
           <Label>分类</Label>
           <Icon sf={{ default: 'tag', selected: 'tag.fill' }} />
         </NativeTabs.Trigger>
@@ -28,7 +28,7 @@ export default function TabLayout() {
           <Icon sf={{ default: 'trash', selected: 'trash.fill' }} />
           <Label>回收站</Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="users">
+        <NativeTabs.Trigger name="(users)">
           <Icon sf={{ default: 'person', selected: 'person.fill' }} />
           <Label>我的</Label>
         </NativeTabs.Trigger>
@@ -45,28 +45,28 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="passwords"
+        name="(passwords)"
         options={{
           title: '全部',
           tabBarIcon: ({ color }) => <TabBarIcon name="organization" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="(categories)"
         options={{
           title: '分类',
           tabBarIcon: ({ color }) => <TabBarIcon name="grid" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="trash"
+        name="(trash)"
         options={{
           title: '回收站',
           tabBarIcon: ({ color }) => <TabBarIcon name="trash" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="users"
+        name="(users)"
         options={{
           title: '我的',
           tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
