@@ -61,7 +61,7 @@ export default function SignIn(props) {
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
-                placeholder="name@clwy.cn"
+                placeholder="请输入用户名或邮箱"
                 keyboardType={'email-address'}
                 autoCapitalize={'none'}
                 autoCorrect={false}
@@ -75,7 +75,7 @@ export default function SignIn(props) {
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
-                placeholder="・・・・・・・・"
+                placeholder="请输入密码"
                 autoCapitalize={'none'}
                 autoCorrect={false}
                 secureTextEntry={hidePassword}

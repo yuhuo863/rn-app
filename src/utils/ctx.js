@@ -36,7 +36,6 @@ export function SessionProvider({ children }) {
             setLoading(false)
             router.navigate('/passwords')
           } catch (err) {
-            // console.error('err=>', err.data.errors[0])
             Alert.alert(
               '错误',
               err.data.errors[0],
