@@ -14,7 +14,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This application requires Face ID permission to ensure your password security."
+      }
     },
     "android": {
       "adaptiveIcon": {

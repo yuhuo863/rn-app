@@ -29,15 +29,10 @@ function HeaderButton(props) {
 export default function tabOptions() {
   return {
     headerTitleAlign: 'center', // 安卓标题栏居中
-    headerTitle: (props) => <LogoTitle {...props} />,
+    // headerTitle: (props) => <LogoTitle {...props} />,
     headerLeft: () => <HeaderButton name="bell" href="/notices" style={styles.headerButton} />,
     headerRight: () => (
       <>
-        <HeaderButton
-          name="magnifier"
-          href="/search"
-          style={[styles.headerButton, styles.searchButton]}
-        />
         <HeaderButton name="options" href="/settings" style={styles.headerButton} />
       </>
     ),
@@ -51,8 +46,5 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
-  },
-  searchButton: {
-    marginRight: 10,
   },
 })

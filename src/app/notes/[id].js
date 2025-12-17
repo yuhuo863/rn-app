@@ -1,9 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native'
+import { useLocalSearchParams } from 'expo-router'
 
-export default function History() {
+export default function Note() {
+  const { details } = useLocalSearchParams()
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>这里是密码历史记录页!</Text>
+      <Text style={styles.detail}>{details}</Text>
     </View>
   )
 }
@@ -12,12 +14,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 15,
   },
-  title: {
-    fontSize: 24,
+  detail: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#e29447',
+    color: '#69d',
   },
 })
