@@ -275,14 +275,14 @@ export default function Categories() {
       visible={actionVisible}
       transparent
       animationType="slide"
-      onDismiss={() => console.log('iOS: 模态框彻底消失')}
+      onDismiss={() => console.log('iOS: 模态框消失')}
       onRequestClose={dismissActionSheet}
     >
       <Pressable style={styles.modalOverlay2} onPress={dismissActionSheet}>
         <View style={styles.actionSheet}>
           <View style={styles.sheetHandle} />
 
-          <Text style={styles.sheetTitle}>管理分类：{selectedCategory?.name}</Text>
+          <Text style={styles.sheetTitle}>{selectedCategory?.name}</Text>
 
           <TouchableOpacity
             style={[styles.actionBtnContainer]}
@@ -414,7 +414,6 @@ export default function Categories() {
           {renderContent()}
         </ScrollView>
 
-        {/* 4. 重新设计的新增按钮：底部嵌入式中枢 */}
         <View style={styles.footerDock}>
           <View style={styles.dockBaseShadow}>
             <TouchableOpacity
@@ -422,9 +421,19 @@ export default function Categories() {
               activeOpacity={0.8}
               onPress={handleAddClick}
             >
-              <View style={styles.addBtnInner}>
-                <Ionicons name="add" size={32} color="#fff" />
-              </View>
+              <LinearGradient
+                // 柔和蓝紫渐变（低饱和度）
+                colors={['#60a5fa', '#818cf8']}
+                start={{ x: 0.2, y: 0.2 }} // 轻微偏移起点
+                end={{ x: 0.8, y: 0.8 }} // 轻微偏移终点
+                style={styles.addBtnGradient}
+              >
+                <Ionicons
+                  name="add"
+                  size={32}
+                  color="rgba(255, 255, 255, 0.9)" // 半透明白色增强柔和感
+                />
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -448,8 +457,8 @@ const styles = StyleSheet.create({
   neuSearchInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E0E5EC',
-    borderRadius: 14,
+    backgroundColor: '#f0f4f8',
+    borderRadius: 10,
     paddingHorizontal: 15,
     height: 48,
     borderWidth: 1,
@@ -573,28 +582,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E5EC',
     justifyContent: 'center',
     alignItems: 'center',
+    // 弱化底座阴影，增强柔和感
     ...Platform.select({
       ios: {
         shadowColor: '#A3B1C6',
-        shadowOffset: { width: 10, height: 10 },
-        shadowOpacity: 0.8,
-        shadowRadius: 10,
+        shadowOffset: { width: 6, height: 6 }, // 缩小偏移
+        shadowOpacity: 0.6, // 降低不透明度
+        shadowRadius: 8, // 减小模糊半径
       },
-      android: { elevation: 10 },
+      android: { elevation: 6 }, // 降低 elevation
     }),
   },
   mainAddBtn: {
     width: 65,
     height: 65,
     borderRadius: 32.5,
-    backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
+    borderWidth: 3, // 减细边框
     borderColor: '#E0E5EC',
+    transform: [{ scale: 1 }],
+    transition: 'transform 0.2s ease',
+    // 按钮外层光影（柔和扩散）
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(96, 165, 250, 0.3)', // 浅蓝阴影
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.7,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
-  addBtnInner: {
-    // 可以在这里加微弱的光影
+  // 新增渐变容器样式
+  addBtnGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 32.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // 内阴影效果（模拟按钮凹陷感）
+    ...Platform.select({
+      ios: {
+        shadowColor: 'rgba(255, 255, 255, 0.5)',
+        shadowOffset: { width: -2, height: -2 },
+        shadowOpacity: 0.8,
+        shadowRadius: 4,
+      },
+    }),
   },
 
   modalOverlay: {
@@ -667,6 +704,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E5EC',
     justifyContent: 'center',
     alignItems: 'center',
+    // 微凸起
     shadowColor: '#A3B1C6',
     shadowOffset: { width: 5, height: 5 },
     shadowOpacity: 0.7,

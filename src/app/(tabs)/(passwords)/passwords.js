@@ -30,9 +30,7 @@ import { useCategoryContext } from '@/utils/context/CategoryContext'
 
 export default function Index() {
   const { refresh, filterId, filterName } = useLocalSearchParams()
-  const { data, loading, error, refreshing, onReload, onRefresh } = useFetchData('/password', {
-    paranoid: 'true',
-  })
+  const { data, loading, error, refreshing, onReload, onRefresh } = useFetchData('/password')
 
   const [isLocked, setIsLocked] = useState(!authStatus.isUnlocked) // 初始状态为锁定
   const appState = useRef(AppState.currentState)
