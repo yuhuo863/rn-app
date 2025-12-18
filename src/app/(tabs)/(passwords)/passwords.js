@@ -11,22 +11,25 @@ import {
   ScrollView,
   Alert,
   AppState,
+  DeviceEventEmitter,
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import useFetchData from '@/hooks/useFetchData'
 import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
-import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router'
-import EmptyState from '@/components/shared/EmptyState'
+import { Link, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 // import useLoadMore from '@/hooks/useLoadMore'
 import { FontAwesome, Ionicons } from '@expo/vector-icons'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PasswordFormModal from '@/components/shared/PasswordFormModal'
 import { performBiometricAuth } from '@/utils/auth'
 import { authStatus } from '@/utils/auth'
+import { BlurView } from 'expo-blur'
+import * as ScreenCapture from 'expo-screen-capture'
+import { useCategoryContext } from '@/utils/context/CategoryContext'
 
 export default function Index() {
-  const { refresh } = useLocalSearchParams()
+  const { refresh, filterId, filterName } = useLocalSearchParams()
   const { data, loading, error, refreshing, onReload, onRefresh } = useFetchData('/password', {
     paranoid: 'true',
   })
@@ -66,58 +69,100 @@ export default function Index() {
     }, [triggerAuth]),
   )
 
+  useEffect(() => {
+    if (filterId) {
+      setActiveCategory(filterId)
+    } else {
+      setActiveCategory(null)
+    }
+  }, [filterId])
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('app:password_updated', async () => {
+      await onReload()
+    })
+    return () => sub.remove()
+  }, [onReload])
+  const router = useRouter()
+  const handleClearFilter = () => {
+    setActiveCategory(null)
+    router.setParams({ filterId: undefined, filterName: undefined })
+  }
+
   // 监听 App 状态切换（切后台自动锁定）
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      // 从后台/非活跃状态切回前台
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        authStatus.isUnlocked = false
-        setIsLocked(true)
-        triggerAuth() // 自动触发身份验证
-      }
+    let isCaptureProtected = false
 
+    const setupProtection = async () => {
+      // 1. 检查 API 在当前环境下是否可用
+      const isAvailable = await ScreenCapture.isAvailableAsync()
+      if (isAvailable) {
+        // 2. 启用安全屏障，禁止截图和多任务预览(支持 iOS 和 Android)
+        await ScreenCapture.preventScreenCaptureAsync()
+        isCaptureProtected = true
+      }
+    }
+
+    setupProtection()
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
       // 离开前台（进入多任务界面或锁屏）
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         authStatus.isUnlocked = false
         setIsLocked(true)
       }
 
+      // 从后台/非活跃状态切回前台
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        setIsLocked(true)
+        triggerAuth() // 自动触发身份验证
+      }
+
       appState.current = nextAppState
     })
 
-    return () => subscription.remove()
+    return () => {
+      subscription.remove()
+      // 离开页面时, 如果之前开启了保护，则恢复允许截图
+      if (isCaptureProtected) {
+        ScreenCapture.allowScreenCaptureAsync()
+      }
+    }
   }, [triggerAuth])
 
-  const { data: categoryMap, loading: cLoading, error: cError } = useFetchData('/category')
+  const {
+    state: { categories },
+    isInitialized,
+  } = useCategoryContext()
   // const { onEndReached, LoadMoreFooter } = useLoadMore('/password', 'passwords', setData)
 
-  // 搜索与分类筛选状态
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeCategory, setActiveCategory] = useState(null) // null 表示“全部”
-  const [filterVisible, setFilterVisible] = useState(false) // 控制筛选弹出层显示
+  const [activeCategory, setActiveCategory] = useState(null)
+  const [filterVisible, setFilterVisible] = useState(false)
   const handleSelectCategory = (catId) => {
     setActiveCategory(catId)
     setFilterVisible(false)
   }
-  // 使用 useMemo 计算最终显示的列表（叠加逻辑）
+
   const filteredData = useMemo(() => {
     if (!data?.passwords) return []
 
-    return data.passwords.filter((item) => {
-      // 搜索过滤：匹配标题或用户名
-      const searchLower = searchQuery.toLowerCase().trim()
-      const matchesSearch =
-        searchLower === '' ||
-        item.title?.toLowerCase().includes(searchLower) ||
-        item.username?.toLowerCase().includes(searchLower)
-
-      // 分类过滤：匹配选中 ID
-      const matchesCategory = activeCategory === null || item.categoryId === activeCategory
-
-      // 只有同时满足搜索和分类条件的才显示
-      return matchesSearch && matchesCategory
-    })
-  }, [data?.passwords, searchQuery, activeCategory])
+    return data.passwords
+      .map((item) => {
+        // 动态匹配：从全局 categories 中实时查找该密码所属的分类信息
+        // 这样即便分类在另一个页面改了名，这里不需要刷新接口也会变
+        const currentCategory = categories.find((c) => c.id === item.categoryId)
+        return {
+          ...item,
+          category: currentCategory || item.category, // 优先使用全局最新数据
+        }
+      })
+      .filter((item) => {
+        const searchLower = searchQuery.toLowerCase().trim()
+        const matchesSearch = searchLower === '' || item.title?.toLowerCase().includes(searchLower)
+        const matchesCategory = activeCategory === null || item.categoryId === activeCategory
+        return matchesSearch && matchesCategory
+      })
+  }, [data?.passwords, searchQuery, activeCategory, categories]) // 依赖项加入 categories
 
   const [modalVisible, setModalVisible] = useState(false)
 
@@ -133,7 +178,7 @@ export default function Index() {
                   <FontAwesome
                     name={item.category?.icon || 'lock'}
                     size={20}
-                    color={styles.primaryColor}
+                    color={item.category?.color || styles.primaryColor}
                   />
                 </View>
                 {item.category?.name && (
@@ -196,6 +241,25 @@ export default function Index() {
           <Ionicons name="filter" size={24} color={activeCategory ? '#fff' : '#64748b'} />
         </TouchableOpacity>
       </View>
+      {activeCategory && (
+        <View style={styles.activeFilterRow}>
+          <View style={styles.neuChipOuter}>
+            <View style={styles.neuChipInner}>
+              <FontAwesome
+                name={categories?.find((c) => c.id === activeCategory)?.icon || 'tag'}
+                size={14}
+                color="#3b82f6"
+              />
+              <Text style={styles.activeFilterText}>
+                {categories?.find((c) => c.id === activeCategory)?.name || '已选分类'}
+              </Text>
+              <TouchableOpacity onPress={handleClearFilter} style={styles.chipCloseBtn}>
+                <Ionicons name="close-circle" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   )
 
@@ -233,7 +297,7 @@ export default function Index() {
             style={styles.categoryScrollArea}
             contentContainerStyle={styles.categoryGrid} // 网格布局放在 contentContainer 里
           >
-            {categoryMap?.categories?.map((cat) => (
+            {categories?.map((cat) => (
               <TouchableOpacity
                 key={cat.id}
                 style={[
@@ -272,21 +336,48 @@ export default function Index() {
     </Modal>
   )
 
-  const renderContent = () => {
-    if (loading) {
-      return <Loading />
-    }
+  const renderLockedOverlayContent = () => (
+    <View style={styles.lockedOverlay}>
+      <View style={styles.lockCircle}>
+        <Ionicons name="lock-closed" size={40} color="#3b82f6" />
+      </View>
+      <Text style={styles.lockTitle}>密码箱已锁定</Text>
+      <Text style={styles.lockSubText}>为了您的账户安全，请验证身份</Text>
 
-    if (isLocked) {
-      return (
-        <View style={styles.lockedContainer}>
-          <Ionicons name="lock-closed" size={60} color="#3b82f6" />
-          <Text style={styles.lockText}>密码箱已锁定</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={triggerAuth}>
-            <Text style={styles.retryBtnText}>点击验证解锁</Text>
-          </TouchableOpacity>
+      <TouchableOpacity style={styles.retryBtn} activeOpacity={0.8} onPress={triggerAuth}>
+        <Text style={styles.retryBtnText}>点击验证解锁</Text>
+      </TouchableOpacity>
+    </View>
+  )
+
+  const CategoryEmptyState = () => {
+    return (
+      <View style={styles.emptyContainer}>
+        <View style={styles.emptyIconOuter}>
+          <View style={styles.emptyIconInner}>
+            <FontAwesome name="folder-open-o" size={50} color="#cbd5e1" />
+          </View>
         </View>
-      )
+
+        <Text style={styles.emptyTitle}>
+          {filterName ? `"${filterName}" 暂无记录` : '这里空空如也'}
+        </Text>
+        <Text style={styles.emptySubText}>
+          {filterName
+            ? `您尚未在 "${filterName}" 分类下存储任何资产`
+            : '开始记录您的第一条加密信息吧'}
+        </Text>
+
+        <View style={styles.emptyGuideBox}>
+          <Text style={styles.guideText}>点击下方蓝色按钮添加</Text>
+        </View>
+      </View>
+    )
+  }
+
+  const renderContent = () => {
+    if (loading || !isInitialized) {
+      return <Loading />
     }
 
     if (error) {
@@ -309,7 +400,7 @@ export default function Index() {
             tintColor={styles.primaryColor}
           />
         }
-        ListEmptyComponent={EmptyState}
+        ListEmptyComponent={CategoryEmptyState}
         // ListFooterComponent={LoadMoreFooter}
         // onEndReached={onEndReached}
         // onEndReachedThreshold={0.1}
@@ -334,11 +425,25 @@ export default function Index() {
           <FontAwesome name="plus" size={24} color="#fff" />
         </TouchableOpacity>
 
+        {isLocked &&
+          (Platform.OS === 'ios' ? (
+            // iOS: 使用 BlurView 达到完美的毛玻璃预览效果
+            <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill}>
+              {renderLockedOverlayContent()}
+            </BlurView>
+          ) : (
+            // Android: 使用实色背景遮罩。
+            // 因为 Android 预览图已被 ScreenCapture 屏蔽，切回时用实色背景渲染更快，且能彻底遮挡明文。
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#f8fafc' }]}>
+              {renderLockedOverlayContent()}
+            </View>
+          ))}
+
         {/* 模态框：添加密码 */}
         <PasswordFormModal
           visible={modalVisible}
           mode="create"
-          categoryMap={categoryMap}
+          categoryMap={{ categories }}
           onClose={() => setModalVisible(false)}
           onSuccess={() => onReload()}
         />
@@ -364,6 +469,52 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 10,
     backgroundColor: '#f8fafc',
+  },
+
+  activeFilterRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 25,
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  neuChipOuter: {
+    backgroundColor: '#E0E5EC',
+    borderRadius: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#A3B1C6',
+        shadowOffset: { width: 4, height: 4 },
+        shadowOpacity: 0.8,
+        shadowRadius: 5,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  neuChipInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#ffffff',
+        shadowOffset: { width: -3, height: -3 },
+        shadowOpacity: 1,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  activeFilterText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#444',
+    marginHorizontal: 8,
+  },
+  chipCloseBtn: {
+    marginLeft: 4,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -491,12 +642,17 @@ const styles = StyleSheet.create({
   cardTouchable: {
     borderRadius: 16,
     backgroundColor: '#fff',
-    // 阴影优化
-    shadowColor: '#64748b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#64748b',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   card: {
     padding: 16,
@@ -686,14 +842,92 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 24,
   },
+  lockedOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)', // 配合 BlurView 增加层次感
+  },
+  lockCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    // 阴影让锁定图标更突出
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  lockTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  lockSubText: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 32,
+  },
   retryBtn: {
     backgroundColor: '#3b82f6',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 14,
   },
   retryBtnText: {
     color: '#fff',
+    fontSize: 16,
     fontWeight: '700',
   },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 100,
+  },
+  emptyIconOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#E0E5EC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  emptyIconInner: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#E0E5EC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
+    shadowColor: '#A3B1C6',
+    shadowOffset: { width: -4, height: -4 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+  },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#64748b', marginTop: 24 },
+  emptySubText: { fontSize: 14, color: '#94a3b8', marginTop: 8 },
+  emptyGuideBox: {
+    marginTop: 40,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+  },
+  guideText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
 })

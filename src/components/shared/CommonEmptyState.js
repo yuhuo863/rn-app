@@ -4,7 +4,7 @@ import { SimpleLineIcons } from '@expo/vector-icons'
 /**
  * 暂无数据
  */
-export default function EmptyState() {
+export default function CommonEmptyState() {
   return (
     <View style={styles.notice}>
       <SimpleLineIcons name={'drawer'} size={160} color={'#ddd'} />

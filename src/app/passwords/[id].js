@@ -7,6 +7,7 @@ import {
   Alert,
   Platform,
   Modal,
+  DeviceEventEmitter,
 } from 'react-native'
 import { Stack, Link, useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
@@ -19,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Clipboard from 'expo-clipboard'
 import Toast from 'react-native-root-toast'
 import PasswordFormModal from '@/components/shared/PasswordFormModal'
+import { useCategoryContext } from '@/utils/context/CategoryContext'
 
 export default function Password() {
   const { id } = useLocalSearchParams()
@@ -28,13 +30,18 @@ export default function Password() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
 
   const [editVisible, setEditVisible] = useState(false)
-  const { data: categoryMap } = useFetchData('/category')
+  const {
+    state: { categories },
+    refreshCategories,
+  } = useCategoryContext()
 
   const handleDelete = async () => {
     setDeleteModalVisible(false)
     setDeleting(true)
     try {
       await apiService.delete(`/password/${id}`)
+      await refreshCategories() // 用于刷新分类列表对应分类的passwordsCount
+
       setDeleting(false)
       setDeleteModalVisible(false)
       router.push({
@@ -46,6 +53,11 @@ export default function Password() {
     } finally {
       setDeleting(false)
     }
+  }
+
+  const handleSuccess = async () => {
+    await onReload()
+    router.setParams({ refresh: Date.now() })
   }
 
   const ConfirmDeleteModal = () => (
@@ -246,10 +258,13 @@ export default function Password() {
         <PasswordFormModal
           visible={editVisible}
           mode="edit"
-          initialData={data.password} // 将详情接口返回的 password 对象传进去
-          categoryMap={categoryMap}
+          initialData={data.password}
+          categoryMap={{ categories }}
           onClose={() => setEditVisible(false)}
-          onSuccess={() => onReload()} // 成功后刷新详情页数据
+          onSuccess={async () => {
+            await onReload()
+            DeviceEventEmitter.emit('app:password_updated')
+          }}
         />
       </View>
     )
