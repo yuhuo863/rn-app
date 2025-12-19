@@ -122,8 +122,8 @@ export default function Categories() {
   }
   const CategoryFormModal = () => {
     const iconOptions = [
-      'hashtag',
       'folder',
+      'id-card',
       'globe',
       'credit-card',
       'shopping-cart',

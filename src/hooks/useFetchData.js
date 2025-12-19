@@ -18,8 +18,12 @@ const useFetchData = (url, params = {}) => {
     }
   }
 
-  const onReload = async () => {
-    setLoading(true)
+  const onReload = async (props = {}) => {
+    if (props.silent) {
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     setError(false)
     await fetchData()
   }

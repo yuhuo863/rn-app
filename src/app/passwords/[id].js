@@ -55,11 +55,6 @@ export default function Password() {
     }
   }
 
-  const handleSuccess = async () => {
-    await onReload()
-    router.setParams({ refresh: Date.now() })
-  }
-
   const ConfirmDeleteModal = () => (
     <Modal
       visible={deleteModalVisible}

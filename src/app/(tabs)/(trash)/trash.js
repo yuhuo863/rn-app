@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   BackHandler,
   LayoutAnimation,
   UIManager,
+  Animated,
+  Easing,
+  DeviceEventEmitter,
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -18,6 +21,7 @@ import useFetchData from '@/hooks/useFetchData'
 import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 import apiService from '@/utils/request'
+import { useCategoryContext } from '@/utils/context/CategoryContext'
 
 // Android 开启 LayoutAnimation
 if (
@@ -42,10 +46,19 @@ const COLORS = {
 
 export default function TrashScreen() {
   const { data, loading, error, refreshing, onRefresh, onReload } = useFetchData('/password/trash')
+  const { refreshCategories } = useCategoryContext()
 
   // --- 多选模式状态 ---
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
+
+  // 记录本地已删除/恢复的 ID，用于过滤 UI，避免闪烁
+  const [localDeletedIds, setLocalDeletedIds] = useState(new Set())
+  // 通过 useMemo 对原始数据进行过滤
+  const filteredPasswords = useMemo(() => {
+    if (!data?.passwords) return []
+    return data.passwords.filter((item) => !localDeletedIds.has(item.id))
+  }, [data, localDeletedIds])
 
   // 退出多选模式时重置
   const exitSelectionMode = () => {
@@ -53,6 +66,15 @@ export default function TrashScreen() {
     setIsSelectionMode(false)
     setSelectedIds(new Set())
   }
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('app:password:deleted', async () => {
+      setLocalDeletedIds(new Set())
+      await onReload({ silent: true }) // 捕获到删除事件后静默刷新
+    })
+
+    return () => sub.remove()
+  }, [onReload])
 
   useEffect(() => {
     const onBackPress = () => {
@@ -74,7 +96,7 @@ export default function TrashScreen() {
     if (newSet.has(id)) {
       newSet.delete(id)
       if (newSet.size === 0 && isSelectionMode) {
-        // 可选：如果取消了所有选择，是否自动退出模式？通常保留模式更好
+        // 可选：如果取消了所有选择，是否自动退出模式？
         // exitSelectionMode()
       }
     } else {
@@ -120,14 +142,25 @@ export default function TrashScreen() {
         onPress: async () => {
           try {
             const idsArray = Array.from(selectedIds)
+            // 乐观更新：一次性隐藏所有选中的 ID
+            setLocalDeletedIds((prev) => {
+              const next = new Set(prev)
+              idsArray.forEach((id) => next.add(id))
+              return next
+            })
+            exitSelectionMode()
+
             if (isDelete) {
               await apiService.post('/password/force', { id: idsArray })
             } else {
               await apiService.post('/password/restore', { id: idsArray })
+              await refreshCategories()
+              DeviceEventEmitter.emit('app:password_updated')
             }
-            await onReload()
-            exitSelectionMode()
+            // 此时不需要 Reload，界面已经是干净的了
+            // await onReload()
           } catch (e) {
+            await onReload()
             Alert.alert('操作失败', e.data.errors[0])
           }
         },
@@ -201,84 +234,162 @@ export default function TrashScreen() {
     )
   }
 
-  const renderItem = ({ item }) => {
-    const isSelected = selectedIds.has(item.id)
-    const remaining = getRemainingDays(item.deletedAt)
+  const SwipeableItem = ({
+    item,
+    isSelectionMode,
+    onRestore,
+    onLongPress,
+    onPress,
+    isSelected,
+  }) => {
+    // 初始化位移和透明度动画值
+    const translateX = React.useRef(new Animated.Value(0)).current
+    const opacity = React.useRef(new Animated.Value(1)).current
 
+    const itemHeight = React.useRef(new Animated.Value(110)).current
+    const marginBottom = React.useRef(new Animated.Value(12)).current
+
+    const handleRestore = () => {
+      // 启动组合动画
+      Animated.parallel([
+        Animated.timing(translateX, {
+          toValue: 500, // 向左滑出屏幕
+          duration: 500,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          useNativeDriver: false,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(itemHeight, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: false,
+        }),
+        Animated.timing(marginBottom, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: false,
+        }),
+      ]).start((endRes) => {
+        if (endRes.finished) {
+          onRestore(item)
+        }
+      })
+    }
+
+    const remaining = getRemainingDays(item.deletedAt)
     let statusColor = COLORS.textSub
     if (remaining <= 3) statusColor = COLORS.danger
     else if (remaining <= 7) statusColor = COLORS.warning
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onLongPress={() => onLongPressItem(item.id)}
-        onPress={() => onPressItem(item)}
-        style={[
-          styles.card,
-          isSelected && styles.cardSelected, // 选中时的样式变化
-        ]}
+      <Animated.View
+        style={{
+          transform: [{ translateX }],
+          opacity,
+          height: itemHeight, // 绑定高度动画
+          marginBottom: marginBottom, // 绑定间距动画
+          overflow: 'hidden', // 必须设置，否则内容折叠时会溢出
+        }}
       >
-        <View style={styles.cardInner}>
-          {/* 多选模式下的复选框 */}
-          {isSelectionMode && (
-            <View style={styles.checkboxContainer}>
-              <MaterialCommunityIcons
-                name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
-                size={24}
-                color={isSelected ? COLORS.primary : '#C5C5C5'}
-              />
-            </View>
-          )}
-
-          {/* 原有内容区 */}
-          <View style={styles.cardContent}>
-            <View style={styles.rowTop}>
-              <View style={styles.iconBox}>
-                <FontAwesome
-                  name={item.category?.icon || 'lock'}
-                  size={20}
-                  color={COLORS.primary}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onLongPress={() => onLongPress(item.id)}
+          onPress={() => onPress(item)}
+          style={[
+            styles.card,
+            isSelected && styles.cardSelected, // 选中时的样式变化
+          ]}
+        >
+          <View style={styles.cardInner}>
+            {/* 多选模式下的复选框 */}
+            {isSelectionMode && (
+              <View style={styles.checkboxContainer}>
+                <MaterialCommunityIcons
+                  name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                  size={24}
+                  color={isSelected ? COLORS.primary : '#C5C5C5'}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemTitle} numberOfLines={1}>
-                  {item.title}
+            )}
+
+            {/* 原有内容区 */}
+            <View style={styles.cardContent}>
+              <View style={styles.rowTop}>
+                <View style={styles.iconBox}>
+                  <FontAwesome
+                    name={item.category?.icon || 'lock'}
+                    size={20}
+                    color={item.category?.color || '#fff'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.categoryText}>{item.category?.name || '未分类'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.rowBottom}>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: statusColor,
+                  }}
+                >
+                  <FontAwesome name={getHourglassIcon(remaining)} size={12} color={statusColor} />
+                  &nbsp;&nbsp;{remaining === 0 ? '即将清理' : `剩余 ${remaining} 天`}
                 </Text>
-                <Text style={styles.categoryText}>{item.category?.name || '未分类'}</Text>
+                {!isSelectionMode && (
+                  // 非多选模式下显示单独恢复按钮
+                  <TouchableOpacity onPress={handleRestore} hitSlop={10}>
+                    <FontAwesome name="undo" size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.rowBottom}>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: statusColor,
-                }}
-              >
-                <FontAwesome name={getHourglassIcon(remaining)} size={12} color={statusColor} />
-                &nbsp;&nbsp;{remaining === 0 ? '即将清理' : `剩余 ${remaining} 天`}
-              </Text>
-              {!isSelectionMode && (
-                // 非多选模式下显示单独恢复按钮
-                <TouchableOpacity
-                  onPress={() => {
-                    /* 单独恢复逻辑 */
-                    console.log('111')
-                  }}
-                  hitSlop={10}
-                >
-                  <FontAwesome name="undo" size={20} color={COLORS.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
     )
   }
+
+  const performRestore = async (item) => {
+    // 立即更新本地状态，让 FlatList 认为该项已不存在
+    // 配合之前的动画，此时卡片已经坍塌，这样 FlatList 重新计算布局时会保持坍塌后的样子
+    setLocalDeletedIds((prev) => new Set(prev).add(item.id))
+    try {
+      await apiService.post('/password/restore', { id: item.id })
+      await onReload({ silent: true })
+      await refreshCategories()
+      DeviceEventEmitter.emit('app:password_updated')
+    } catch (e) {
+      // 如果失败了，把 ID 拿回来
+      setLocalDeletedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(item.id)
+        return next
+      })
+      Alert.alert('恢复失败', e.data?.errors[0] || '网络错误')
+    }
+  }
+
+  const renderItem = ({ item }) => (
+    <SwipeableItem
+      item={item}
+      isSelectionMode={isSelectionMode}
+      isSelected={selectedIds.has(item.id)}
+      onRestore={performRestore}
+      onLongPress={onLongPressItem}
+      onPress={onPressItem}
+    />
+  )
 
   const renderContent = () => {
     if (loading) return <Loading />
@@ -286,7 +397,7 @@ export default function TrashScreen() {
 
     return (
       <FlatList
-        data={data?.passwords || []}
+        data={filteredPasswords}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}

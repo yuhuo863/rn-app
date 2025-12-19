@@ -12,12 +12,13 @@ import {
   Alert,
   AppState,
   DeviceEventEmitter,
+  Dimensions,
 } from 'react-native'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import useFetchData from '@/hooks/useFetchData'
 import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
-import { Link, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 // import useLoadMore from '@/hooks/useLoadMore'
 import { FontAwesome, Ionicons } from '@expo/vector-icons'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -27,6 +28,23 @@ import { authStatus } from '@/utils/auth'
 import { BlurView } from 'expo-blur'
 import * as ScreenCapture from 'expo-screen-capture'
 import { useCategoryContext } from '@/utils/context/CategoryContext'
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated'
+import * as Haptics from 'expo-haptics'
+import { LinearGradient } from 'expo-linear-gradient'
+import apiService from '@/utils/request'
+
+const SCREEN_WIDTH = Dimensions.get('window').width
+
+const VISUAL_HEIGHT = 120 // 视觉上椭圆的高度（更扁平，不遮挡视线）
+const TRIGGER_THRESHOLD = 160 // 逻辑上的感应区域（比视觉大，提升手感）
+const DROP_ZONE_HEIGHT = 160 // 感应区高度
 
 export default function Index() {
   const { refresh, filterId, filterName } = useLocalSearchParams()
@@ -77,10 +95,11 @@ export default function Index() {
 
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener('app:password_updated', async () => {
-      await onReload()
+      await onReload({ silent: true })
     })
     return () => sub.remove()
   }, [onReload])
+
   const router = useRouter()
   const handleClearFilter = () => {
     setActiveCategory(null)
@@ -130,8 +149,154 @@ export default function Index() {
   const {
     state: { categories },
     isInitialized,
+    refreshCategories,
   } = useCategoryContext()
   // const { onEndReached, LoadMoreFooter } = useLoadMore('/password', 'passwords', setData)
+  // ---------------------------------------------------------
+  // 核心重构区域：拖拽删除逻辑 (Reanimated SharedValues)
+  // ---------------------------------------------------------
+
+  // 全局共享状态：是否有人正在拖拽？(用于控制垃圾桶显示)
+  // 0 = 无拖拽, 1 = 正在拖拽
+  const globalIsDragging = useSharedValue(0)
+
+  // 全局共享状态：是否进入了删除区？(用于控制垃圾桶变大变色)
+  // 0 = 未进入, 1 = 已进入
+  const globalIsOverZone = useSharedValue(0)
+
+  // 最终执行删除的回调 (JS 线程)
+  const handleDelete = async (id) => {
+    // 触发震动反馈
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+
+    await apiService.delete(`/password/${id}`)
+    await onReload({ silent: true })
+    await refreshCategories() // 用于刷新分类列表对应分类的passwordsCount
+
+    DeviceEventEmitter.emit('app:password:deleted')
+  }
+
+  // --- 组件：顶部回收站 (完全由 SharedValue 驱动，不触发 React Render) ---
+  const RecycleBin = () => {
+    // 容器动画：控制显隐和位移
+    const containerStyle = useAnimatedStyle(() => {
+      return {
+        transform: [{ translateY: withSpring(globalIsDragging.value ? 0 : -VISUAL_HEIGHT) }],
+        opacity: withTiming(globalIsDragging.value ? 1 : 0),
+      }
+    })
+
+    // 图标动画：放大效果
+    const iconStyle = useAnimatedStyle(() => {
+      return {
+        transform: [{ scale: withSpring(globalIsOverZone.value ? 1.3 : 1) }],
+      }
+    })
+
+    // 红色层透明度动画 (实现柔和的颜色过渡)
+    // 技巧：我们不直接改变颜色，而是改变叠加在上面的红色渐变层的透明度
+    const redLayerStyle = useAnimatedStyle(() => {
+      return {
+        opacity: withTiming(globalIsOverZone.value, { duration: 200 }),
+      }
+    })
+
+    return (
+      <Animated.View style={[styles.dropZoneContainer, containerStyle]}>
+        {/* 1. 底层：常驻的蓝色/灰色柔和渐变 (默认状态) */}
+        <View style={styles.gradientWrapper}>
+          <LinearGradient
+            colors={['rgba(59, 130, 246, 0.9)', 'rgba(59, 130, 246, 0.05)']} // 上深下浅，极度柔和
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.gradientFill}
+          />
+        </View>
+
+        {/* 2. 顶层：红色的警告渐变 (仅在进入区域时显现) */}
+        <Animated.View style={[styles.gradientWrapper, styles.absoluteFull, redLayerStyle]}>
+          <LinearGradient
+            colors={['rgba(239, 68, 68, 0.95)', 'rgba(239, 68, 68, 0.1)']} // 红色渐变
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.gradientFill}
+          />
+        </Animated.View>
+
+        {/* 3. 图标层 (层级最高) */}
+        <Animated.View style={[styles.iconWrapper, iconStyle]}>
+          <FontAwesome name="trash-o" size={28} color="#fff" />
+          <Text style={styles.dropText}>松手即删</Text>
+        </Animated.View>
+      </Animated.View>
+    )
+  }
+
+  // --- 组件：可拖拽的列表项 ---
+  const DraggableItem = ({ item, children }) => {
+    const translateX = useSharedValue(0)
+    const translateY = useSharedValue(0)
+    const isPressed = useSharedValue(false)
+    const context = useSharedValue({ startX: 0, startY: 0 })
+    const scale = useSharedValue(1)
+
+    const pan = Gesture.Pan()
+      // 关键优化1：长按 250ms 后才激活拖拽，完美解决列表滚动冲突
+      .activateAfterLongPress(200) // 缩短一点时间，提升响应速度
+      .onStart(() => {
+        isPressed.value = true
+        globalIsDragging.value = 1 // 通知垃圾桶出现
+        scale.value = withSpring(1.05)
+        // 震动反馈：告诉用户“抓住了”
+        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium)
+      })
+      .onUpdate((e) => {
+        translateX.value = e.translationX
+        translateY.value = e.translationY
+
+        // 只要 absoluteY < TRIGGER_THRESHOLD (160) 就触发，哪怕视觉上没碰到图标
+        const isOver = e.absoluteY < TRIGGER_THRESHOLD ? 1 : 0
+
+        if (globalIsOverZone.value !== isOver) {
+          globalIsOverZone.value = isOver
+          // 状态改变时给一点微弱震动反馈
+          runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light)
+        }
+      })
+      .onEnd((e) => {
+        if (e.absoluteY < DROP_ZONE_HEIGHT) {
+          // 确认删除
+          runOnJS(handleDelete)(item.id)
+        }
+        // Reset
+        translateX.value = withSpring(0)
+        translateY.value = withSpring(0)
+        scale.value = withSpring(1)
+        globalIsDragging.value = 0
+        globalIsOverZone.value = 0
+        isPressed.value = false
+      })
+      .onFinalize(() => {
+        isPressed.value = false
+        globalIsDragging.value = 0 // 确保意外中断也能复位
+      })
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+      zIndex: isPressed.value ? 9999 : 1,
+      opacity: isPressed.value ? 0.9 : 1,
+    }))
+
+    return (
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.dragWrapper, animatedStyle]}>{children}</Animated.View>
+      </GestureDetector>
+    )
+  }
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState(null)
@@ -167,8 +332,13 @@ export default function Index() {
   const renderItem = ({ item }) => {
     return (
       <View style={styles.cardContainer}>
-        <Link href={`/passwords/${item.id}`} asChild>
-          <TouchableOpacity style={styles.cardTouchable} activeOpacity={0.7}>
+        <DraggableItem item={item}>
+          <TouchableOpacity
+            style={styles.cardTouchable}
+            activeOpacity={0.7}
+            onPress={() => router.navigate(`/passwords/${item.id}`)}
+            delayLongPress={5000}
+          >
             <View style={styles.card}>
               {/* 卡片头部：图标与分类标签 */}
               <View style={styles.cardHeader}>
@@ -216,7 +386,7 @@ export default function Index() {
               </View>
             </View>
           </TouchableOpacity>
-        </Link>
+        </DraggableItem>
       </View>
     )
   }
@@ -313,7 +483,7 @@ export default function Index() {
                   <FontAwesome
                     name={cat.icon || 'folder'}
                     size={20}
-                    color={activeCategory === cat.id ? '#fff' : '#64748b'}
+                    color={activeCategory === cat.id ? '#fff' : cat.color}
                   />
                 </View>
                 <Text
@@ -404,51 +574,56 @@ export default function Index() {
         // onEndReachedThreshold={0.1}
         contentContainerStyle={styles.listContent}
         columnWrapperStyle={styles.columnWrapper}
+        scrollEnabled={true} // Gesture Handler 会自动处理冲突
       />
     )
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        {renderSearchBar()}
-        {renderContent()}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container} edges={['left', 'right']}>
+          <RecycleBin />
 
-        {/* 悬浮添加按钮 */}
-        <TouchableOpacity
-          style={styles.addButton}
-          activeOpacity={0.8}
-          onPress={() => setModalVisible(true)}
-        >
-          <FontAwesome name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
+          {renderSearchBar()}
+          {renderContent()}
 
-        {isLocked &&
-          (Platform.OS === 'ios' ? (
-            // iOS: 使用 BlurView 达到完美的毛玻璃预览效果
-            <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill}>
-              {renderLockedOverlayContent()}
-            </BlurView>
-          ) : (
-            // Android: 使用实色背景遮罩。
-            // 因为 Android 预览图已被 ScreenCapture 屏蔽，切回时用实色背景渲染更快，且能彻底遮挡明文。
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#f8fafc' }]}>
-              {renderLockedOverlayContent()}
-            </View>
-          ))}
+          {/* 悬浮添加按钮 */}
+          <TouchableOpacity
+            style={styles.addButton}
+            activeOpacity={0.8}
+            onPress={() => setModalVisible(true)}
+          >
+            <FontAwesome name="plus" size={24} color="#fff" />
+          </TouchableOpacity>
 
-        {/* 模态框：添加密码 */}
-        <PasswordFormModal
-          visible={modalVisible}
-          mode="create"
-          categoryMap={{ categories }}
-          onClose={() => setModalVisible(false)}
-          onSuccess={() => onReload()}
-        />
-        {/* 筛选分类模态框 */}
-        {renderFilterModal()}
-      </SafeAreaView>
-    </SafeAreaProvider>
+          {isLocked &&
+            (Platform.OS === 'ios' ? (
+              // iOS: 使用 BlurView 达到完美的毛玻璃预览效果
+              <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill}>
+                {renderLockedOverlayContent()}
+              </BlurView>
+            ) : (
+              // Android: 使用实色背景遮罩。
+              // 因为 Android 预览图已被 ScreenCapture 屏蔽，切回时用实色背景渲染更快，且能彻底遮挡明文。
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: '#f8fafc' }]}>
+                {renderLockedOverlayContent()}
+              </View>
+            ))}
+
+          {/* 模态框：添加密码 */}
+          <PasswordFormModal
+            visible={modalVisible}
+            mode="create"
+            categoryMap={{ categories }}
+            onClose={() => setModalVisible(false)}
+            onSuccess={() => onReload()}
+          />
+          {/* 筛选分类模态框 */}
+          {renderFilterModal()}
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   )
 }
 
@@ -460,6 +635,57 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  dropZoneContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: VISUAL_HEIGHT, // 120
+    zIndex: 999, // 确保在最上层
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    // 移除背景色，交由内部 Gradient 处理
+  },
+  gradientWrapper: {
+    width: SCREEN_WIDTH,
+    height: VISUAL_HEIGHT,
+    borderBottomLeftRadius: SCREEN_WIDTH / 1.5, // 更宽的圆弧，视觉更扁平
+    borderBottomRightRadius: SCREEN_WIDTH / 1.5,
+    overflow: 'hidden', // 裁剪 Gradient 为椭圆
+    position: 'absolute',
+    top: 0,
+  },
+  absoluteFull: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  gradientFill: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  iconWrapper: {
+    marginTop: 40, // 适配刘海屏位置
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  dropText: {
+    color: 'rgba(255,255,255,0.95)',
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  dragWrapper: {
+    flex: 1,
+    // 确保拖拽层本身不限制子元素溢出
   },
 
   // 头部搜索与筛选
