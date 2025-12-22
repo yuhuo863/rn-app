@@ -24,10 +24,12 @@ import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { showConfirm } from '@/components/shared/CustomConfirm'
 import Toast from 'react-native-root-toast'
 import { LinearGradient } from 'expo-linear-gradient'
+import { useTheme } from '@/theme/useTheme'
 
 const { width } = Dimensions.get('window')
 
 export default function Categories() {
+  const theme = useTheme()
   const {
     state: { categories: cats },
     dispatch,
@@ -57,12 +59,17 @@ export default function Categories() {
 
   const categorySearchBar = () => (
     <View style={styles.searchWrapper}>
-      <View style={styles.neuSearchInput}>
-        <Ionicons name="search" size={18} color="#94a3b8" />
+      <View
+        style={[
+          styles.neuSearchInput,
+          { backgroundColor: theme.background, borderColor: theme.border },
+        ]}
+      >
+        <Ionicons name="search" size={18} color={theme.textSecondary} />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: theme.text }]}
           placeholder="搜索分类"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={theme.textSecondary}
           onChangeText={setSearchQuery}
         />
       </View>
@@ -73,7 +80,7 @@ export default function Categories() {
   const [editingCategory, setEditingCategory] = useState({ name: '', icon: '', color: '' })
   // 处理点击底部蓝色 "+" 按钮 (新增模式)
   const handleAddClick = () => {
-    setEditingCategory({ name: '', icon: 'hashtag', color: '#3b82f6' }) // 初始化为空数据
+    setEditingCategory({ name: '', icon: 'folder', color: '#3b82f6' }) // 初始化为空数据
     setEditModalVisible(true)
   }
   // 处理长按菜单中的“编辑”点击
@@ -151,12 +158,17 @@ export default function Categories() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setEditModalVisible(false)}>
           <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-            <Pressable style={styles.halfModalContent} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalFixedHeader}>
+            <Pressable
+              style={[styles.halfModalContent, { backgroundColor: theme.background }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View style={[styles.modalFixedHeader, { backgroundColor: theme.background }]}>
                 <View style={styles.modalIndicator} />
 
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{isEditMode ? '编辑分类' : '新增分类'}</Text>
+                <View style={{ backgroundColor: theme.background }}>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>
+                    {isEditMode ? '编辑分类' : '新建分类'}
+                  </Text>
                 </View>
               </View>
 
@@ -172,15 +184,20 @@ export default function Categories() {
                 >
                   <View style={styles.inputSection}>
                     <Text style={styles.inputLabel}>分类名称</Text>
-                    <View style={styles.neuInputInset}>
+                    <View
+                      style={[
+                        styles.neuInputInset,
+                        { backgroundColor: theme.background, borderColor: theme.border },
+                      ]}
+                    >
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, { color: theme.text }]}
                         value={editingCategory.name}
                         onChangeText={(text) =>
                           setEditingCategory({ ...editingCategory, name: text })
                         }
                         placeholder="例如：社交媒体"
-                        placeholderTextColor="#94a3b8"
+                        placeholderTextColor={theme.textSecondary}
                       />
                     </View>
                   </View>
@@ -196,9 +213,10 @@ export default function Categories() {
                           }}
                           style={[
                             styles.iconBtn,
+                            { backgroundColor: theme.background },
                             editingCategory.icon === iconName && {
-                              borderColor: editingCategory.color,
-                              borderWidth: 2,
+                              borderColor: '#3b82f6',
+                              borderWidth: 3,
                             },
                           ]}
                         >
@@ -238,7 +256,11 @@ export default function Categories() {
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.primaryActionBtn, submitting && { opacity: 0.7 }]}
+                    style={[
+                      styles.primaryActionBtn,
+                      { backgroundColor: theme.primary },
+                      submitting && { opacity: 0.7 },
+                    ]}
                     onPress={handleFormSubmit}
                     disabled={submitting}
                   >
@@ -373,15 +395,33 @@ export default function Categories() {
               <View
                 style={[
                   styles.neuOuter,
+                  { backgroundColor: theme.background },
                   isPressed && styles.neuOuterPressed,
                   longPressActiveId === item.id && styles.neuOuterLongActive,
                 ]}
               >
-                <View style={[styles.neuInner, isPressed && styles.neuInnerPressed]}>
-                  <View style={styles.countBadge}>
+                <View
+                  style={[
+                    styles.neuInner,
+                    { borderColor: theme.border },
+                    isPressed && styles.neuInnerPressed,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.countBadge,
+                      { borderColor: theme.border, backgroundColor: theme.background },
+                    ]}
+                  >
                     <Text style={styles.countText}>{item.passwordsCount || 0}</Text>
                   </View>
-                  <View style={[styles.iconBox, isLarge ? styles.iconLarge : styles.iconSmall]}>
+                  <View
+                    style={[
+                      styles.iconBox,
+                      { backgroundColor: theme.background, borderColor: theme.border },
+                      isLarge ? styles.iconLarge : styles.iconSmall,
+                    ]}
+                  >
                     <FontAwesome
                       name={item.icon || 'folder'}
                       size={isLarge ? 30 : 20}
@@ -402,7 +442,7 @@ export default function Categories() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         {/* 2. 搜索框 */}
         {categorySearchBar()}
 
@@ -414,10 +454,10 @@ export default function Categories() {
           {renderContent()}
         </ScrollView>
 
-        <View style={styles.footerDock}>
-          <View style={styles.dockBaseShadow}>
+        <View style={[styles.footerDock, { backgroundColor: theme.categoryAddModalBackground }]}>
+          <View style={[styles.dockBaseShadow, { backgroundColor: theme.card }]}>
             <TouchableOpacity
-              style={styles.mainAddBtn}
+              style={[styles.mainAddBtn, { borderColor: theme.border }]}
               activeOpacity={0.8}
               onPress={handleAddClick}
             >
@@ -704,12 +744,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E5EC',
     justifyContent: 'center',
     alignItems: 'center',
-    // 微凸起
-    shadowColor: '#A3B1C6',
-    shadowOffset: { width: 5, height: 5 },
-    shadowOpacity: 0.7,
-    shadowRadius: 5,
-    elevation: 4,
   },
   colorGrid: {
     flexDirection: 'row',

@@ -18,6 +18,8 @@ import apiService from '@/utils/request'
 import Loading from '@/components/shared/Loading'
 import { useCategoryContext } from '@/utils/context/CategoryContext'
 
+import { useTheme } from '@/theme/useTheme'
+
 export default function PasswordFormModal({
   visible,
   onClose,
@@ -26,6 +28,7 @@ export default function PasswordFormModal({
   initialData = null, // 编辑模式下的初始数据
   categoryMap = null,
 }) {
+  const theme = useTheme()
   const { refreshCategories } = useCategoryContext()
   const [loadingSubmit, setLoadingSubmit] = useState(false)
   const [formParams, setFormParams] = useState({
@@ -62,11 +65,11 @@ export default function PasswordFormModal({
   }, [visible, mode, initialData])
 
   const onChangeText = (text, name) => {
-    setFormParams((prev) => ({ ...prev, [name]: text }))
+    setFormParams((prev) => ({ ...prev, [name]: text === '' ? undefined : text })) // 可选字段为空时传 undefined
   }
 
   const handleSubmit = async () => {
-    if (!formParams.title) return Alert.alert('提示', '请输入标题')
+    if (!formParams.title.trim()) return Alert.alert('提示', '请输入标题')
 
     setLoadingSubmit(true)
     try {
@@ -98,55 +101,107 @@ export default function PasswordFormModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.background }]}>
           {loadingSubmit && <Loading />}
 
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{mode === 'edit' ? '编辑账号信息' : '添加新账号'}</Text>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.divider }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              {mode === 'edit' ? '编辑账号信息' : '添加新账号'}
+            </Text>
             <TouchableOpacity onPress={onClose}>
-              <FontAwesome name="close" size={24} color="#94a3b8" />
+              <FontAwesome name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.formContainer}>
             {/* 分类选择 */}
-            <View style={styles.inputGroup}>
+            <View
+              style={[
+                styles.inputGroup,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+              ]}
+            >
               <View style={styles.iconBox}>
-                <FontAwesome name="folder-open" size={18} color="#64748b" />
+                <FontAwesome name="folder-open" size={18} color={theme.textSecondary} />
               </View>
               <Picker
                 selectedValue={formParams.categoryId}
                 onValueChange={(val) => onChangeText(val, 'categoryId')}
                 style={styles.picker}
+                mode="dropdown"
+                dropdownIconColor={theme.textSecondary}
+                selectionColor={theme.textSecondary}
               >
-                <Picker.Item label="选择分类..." value={null} color="#94a3b8" />
+                <Picker.Item
+                  label="选择分类..."
+                  value={null}
+                  color={theme.textSecondary}
+                  style={{
+                    backgroundColor: theme.background,
+                  }}
+                />
                 {categoryMap?.categories?.map((cat) => (
-                  <Picker.Item label={cat.name} value={cat.id} key={cat.id} />
+                  <Picker.Item
+                    label={cat.name}
+                    value={cat.id}
+                    key={cat.id}
+                    color={theme.textSecondary}
+                    style={{
+                      color: theme.textSecondary,
+                      backgroundColor: theme.background,
+                    }}
+                  />
                 ))}
               </Picker>
             </View>
 
             {/* 标题 */}
-            <View style={styles.inputGroup}>
+            <View
+              style={[
+                styles.inputGroup,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
               <View style={styles.iconBox}>
-                <FontAwesome name="tag" size={18} color="#64748b" />
+                <FontAwesome name="tag" size={18} color={theme.textSecondary} />
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="标题"
+                placeholderTextColor={theme.textSecondary}
                 value={formParams.title}
                 onChangeText={(t) => onChangeText(t, 'title')}
               />
             </View>
 
             {/* 用户名 */}
-            <View style={styles.inputGroup}>
+            <View
+              style={[
+                styles.inputGroup,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
               <View style={styles.iconBox}>
-                <FontAwesome name="user" size={18} color="#64748b" />
+                <FontAwesome name="user" size={18} color={theme.textSecondary} />
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="用户名"
+                placeholderTextColor={theme.textSecondary}
                 autoCapitalize="none"
                 value={formParams.username}
                 onChangeText={(t) => onChangeText(t, 'username')}
@@ -154,13 +209,24 @@ export default function PasswordFormModal({
             </View>
 
             {/* 密码 */}
-            <View style={styles.inputGroup}>
+            <View
+              style={[
+                styles.inputGroup,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
               <View style={styles.iconBox}>
-                <FontAwesome name="lock" size={18} color="#64748b" />
+                <FontAwesome name="lock" size={18} color={theme.textSecondary} />
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="密码"
+                placeholderTextColor={theme.textSecondary}
                 secureTextEntry
                 value={formParams.encrypted_password}
                 onChangeText={(t) => onChangeText(t, 'encrypted_password')}
@@ -168,26 +234,53 @@ export default function PasswordFormModal({
             </View>
 
             {/* 网址 */}
-            <View style={styles.inputGroup}>
+            <View
+              style={[
+                styles.inputGroup,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
               <View style={styles.iconBox}>
-                <FontAwesome name="globe" size={18} color="#64748b" />
+                <FontAwesome name="globe" size={18} color={theme.textSecondary} />
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.text }]}
                 placeholder="网站地址 (可选)"
+                placeholderTextColor={theme.textSecondary}
                 value={formParams.site_url}
                 onChangeText={(t) => onChangeText(t, 'site_url')}
               />
             </View>
 
             {/* 备注 */}
-            <View style={[styles.inputGroup, { height: 'auto', minHeight: 80 }]}>
+            <View
+              style={[
+                styles.inputGroup,
+                {
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                  borderBottomWidth: 1,
+                },
+                {
+                  height: 'auto',
+                  minHeight: 80,
+                  backgroundColor: theme.background,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
               <View style={[styles.iconBox, { paddingTop: 12 }]}>
-                <FontAwesome name="pencil" size={18} color="#64748b" />
+                <FontAwesome name="pencil" size={18} color={theme.textSecondary} />
               </View>
               <TextInput
-                style={[styles.input, { height: 80 }]}
+                style={[styles.input, { height: 80, color: theme.text }]}
                 placeholder="备注 (可选)"
+                placeholderTextColor={theme.textSecondary}
                 multiline
                 value={formParams.notes}
                 onChangeText={(t) => onChangeText(t, 'notes')}
@@ -196,7 +289,10 @@ export default function PasswordFormModal({
           </ScrollView>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: theme.primary }]}
+              onPress={handleSubmit}
+            >
               <Text style={styles.saveButtonText}>{mode === 'edit' ? '保存修改' : '立即创建'}</Text>
             </TouchableOpacity>
           </View>
@@ -222,7 +318,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f8fafc',
     borderRadius: 12,
-    borderWidth: 1,
     borderColor: '#e2e8f0',
     marginBottom: 16,
     height: 54,

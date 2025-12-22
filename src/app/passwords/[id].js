@@ -19,10 +19,13 @@ import { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Clipboard from 'expo-clipboard'
 import Toast from 'react-native-root-toast'
-import PasswordFormModal from '@/components/shared/PasswordFormModal'
+import PasswordFormModal from '@/components/passwords/PasswordFormModal'
 import { useCategoryContext } from '@/utils/context/CategoryContext'
+import { useTheme } from '@/theme/useTheme'
 
 export default function Password() {
+  const theme = useTheme()
+
   const { id } = useLocalSearchParams()
   const router = useRouter()
   const { data, loading, error, onReload } = useFetchData(`/password/${id}`)
@@ -63,14 +66,16 @@ export default function Password() {
       onRequestClose={() => setDeleteModalVisible(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.alertBox}>
+        <View style={[styles.alertBox, { backgroundColor: theme.background }]}>
           {/* 顶部警告图标 */}
           <View style={styles.warningIconContainer}>
             <Ionicons name="alert-circle" size={40} color="#ef4444" />
           </View>
 
-          <Text style={styles.alertTitle}>确认删除？</Text>
-          <Text style={styles.alertMessage}>删除后该账号密码将被移入回收站。</Text>
+          <Text style={[styles.alertTitle, { color: theme.text }]}>确认删除？</Text>
+          <Text style={[styles.alertMessage, { color: theme.textSecondary }]}>
+            删除后该账号密码将被移入回收站。
+          </Text>
 
           <View style={styles.alertButtonGroup}>
             {/* 取消按钮 */}
@@ -128,19 +133,33 @@ export default function Password() {
         >
           {/* 顶部大卡片：图标与标题 */}
           <View style={styles.headerCard}>
-            <View style={styles.iconBigBox}>
-              <FontAwesome name={item.category?.icon || 'lock'} size={40} color="#3b82f6" />
+            <View
+              style={[
+                styles.iconBigBox,
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
+              <FontAwesome
+                name={item.category?.icon || 'lock'}
+                size={40}
+                color={item.category.color}
+              />
             </View>
-            <Text style={styles.headerTitle}>{item.title}</Text>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>{item.title}</Text>
             {item.category?.name && (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{item.category.name}</Text>
+              <View style={[styles.categoryBadge, { backgroundColor: theme.background }]}>
+                <Text style={[styles.categoryText, { color: theme.textSecondary }]}>
+                  {item.category.name}
+                </Text>
               </View>
             )}
 
             {item.site_url && (
               <TouchableOpacity
-                style={styles.urlContainer}
+                style={[
+                  styles.urlContainer,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                ]}
                 onPress={() => copyToClipboard(item.site_url, '网址')}
               >
                 <FontAwesome name="globe" size={14} color="#64748b" />
@@ -156,15 +175,20 @@ export default function Password() {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>账号信息</Text>
 
-            <View style={styles.infoCard}>
+            <View
+              style={[
+                styles.infoCard,
+                { backgroundColor: theme.background, borderColor: theme.border },
+              ]}
+            >
               {/* 用户名 */}
               <View style={styles.rowItem}>
                 <View style={styles.labelBox}>
                   <FontAwesome name="user" size={16} color="#94a3b8" />
-                  <Text style={styles.labelText}>用户名</Text>
+                  <Text style={[styles.labelText, { color: theme.text }]}>用户名</Text>
                 </View>
                 <View style={styles.valueBox}>
-                  <Text style={styles.valueText} selectable>
+                  <Text style={[styles.valueText, { color: theme.textSecondary }]} selectable>
                     {item.username || '未设置'}
                   </Text>
                   <TouchableOpacity
@@ -176,16 +200,16 @@ export default function Password() {
                 </View>
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
               {/* 密码 */}
               <View style={styles.rowItem}>
                 <View style={styles.labelBox}>
                   <FontAwesome name="key" size={16} color="#94a3b8" />
-                  <Text style={styles.labelText}>密码</Text>
+                  <Text style={[styles.labelText, { color: theme.text }]}>密码</Text>
                 </View>
                 <View style={styles.valueBox}>
-                  <Text style={styles.passwordText} selectable>
+                  <Text style={[styles.passwordText, { color: theme.textSecondary }]} selectable>
                     {item.password}
                   </Text>
                 </View>
@@ -210,8 +234,13 @@ export default function Password() {
                   </TouchableOpacity>
                 </Link>
               </View>
-              <View style={styles.infoCard}>
-                <Text style={styles.notesText} numberOfLines={3}>
+              <View
+                style={[
+                  styles.infoCard,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.notesText, { color: theme.text }]} numberOfLines={3}>
                   {item.notes}
                 </Text>
               </View>
@@ -223,7 +252,12 @@ export default function Password() {
         </ScrollView>
 
         {/* 底部固定按钮区 */}
-        <View style={styles.bottomActionContainer}>
+        <View
+          style={[
+            styles.bottomActionContainer,
+            { backgroundColor: theme.background, borderTopColor: theme.border },
+          ]}
+        >
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => setDeleteModalVisible(true)}
@@ -266,11 +300,14 @@ export default function Password() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['bottom']}
+    >
       <Stack.Screen
         options={{
           title: '', // 隐藏默认标题，使用自定义头部
-          headerStyle: { backgroundColor: '#f8fafc' }, // 与背景同色
+          headerStyle: { backgroundColor: theme.card }, // 与背景同色
           headerShadowVisible: false, // 去掉阴影
           headerTintColor: '#1e293b',
         }}
@@ -354,8 +391,10 @@ const styles = StyleSheet.create({
 
   // 信息卡片（白色圆角）
   infoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
     borderRadius: 16,
+    borderColor: '#e2e8f0',
+    borderWidth: 1,
     padding: 16,
     // 阴影
     shadowColor: '#64748b',

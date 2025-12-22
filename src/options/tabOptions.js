@@ -2,6 +2,7 @@ import { Link } from 'expo-router'
 import { Image } from 'expo-image'
 import { SimpleLineIcons } from '@expo/vector-icons'
 import { StyleSheet, TouchableOpacity } from 'react-native'
+import { useTheme } from '@/theme/useTheme'
 
 /**
  * 导航栏 Logo 组件
@@ -16,11 +17,12 @@ function LogoTitle() {
  */
 function HeaderButton(props) {
   const { name, ...rest } = props
+  const theme = useTheme()
 
   return (
     <Link asChild {...rest}>
       <TouchableOpacity>
-        <SimpleLineIcons size={20} color="#1f99b0" name={name} />
+        <SimpleLineIcons size={20} color={theme.text} name={name} />
       </TouchableOpacity>
     </Link>
   )

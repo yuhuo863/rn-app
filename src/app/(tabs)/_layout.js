@@ -2,6 +2,7 @@ import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs'
 import { Tabs } from 'expo-router'
 import { Platform } from 'react-native'
 import { SimpleLineIcons } from '@expo/vector-icons'
+import { useTheme } from '@/theme/useTheme'
 
 /**
  * TabBar 图标组件
@@ -12,10 +13,11 @@ function TabBarIcon(props) {
 }
 
 export default function TabLayout() {
+  const theme = useTheme()
   // iOS 使用原生液态玻璃 Tabs
   if (Platform.OS === 'ios') {
     return (
-      <NativeTabs tintColor="#1f99b0" disableTransparentOnScrollEdge>
+      <NativeTabs tintColor={theme.tabBarActiveTint} disableTransparentOnScrollEdge>
         <NativeTabs.Trigger name="passwords">
           <Icon sf={{ default: 'key', selected: 'key.fill' }} />
           <Label>全部</Label>
@@ -41,7 +43,15 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#1f99b0',
+        tabBarActiveTintColor: theme.tabBarActiveTint,
+        tabBarInactiveTintColor: theme.tabBarInactiveTint,
+        tabBarStyle: {
+          backgroundColor: theme.tabBarBackground,
+          borderTopColor: theme.border,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+        },
       }}
     >
       <Tabs.Screen

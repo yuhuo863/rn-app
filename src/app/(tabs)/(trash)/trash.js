@@ -22,6 +22,7 @@ import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 import apiService from '@/utils/request'
 import { useCategoryContext } from '@/utils/context/CategoryContext'
+import { useTheme } from '@/theme/useTheme'
 
 // Android 开启 LayoutAnimation
 if (
@@ -45,6 +46,8 @@ const COLORS = {
 }
 
 export default function TrashScreen() {
+  const theme = useTheme()
+
   const { data, loading, error, refreshing, onRefresh, onReload } = useFetchData('/password/trash')
   const { refreshCategories } = useCategoryContext()
 
@@ -207,11 +210,18 @@ export default function TrashScreen() {
     // 多选模式下的 Header
     if (isSelectionMode) {
       return (
-        <View style={[styles.headerContainer, styles.selectionHeader]}>
+        <View
+          style={[
+            styles.headerContainer,
+            styles.selectionHeader,
+            { backgroundColor: theme.background },
+            { borderBottomColor: theme.border },
+          ]}
+        >
           <TouchableOpacity onPress={exitSelectionMode}>
             <Text style={styles.cancelText}>取消</Text>
           </TouchableOpacity>
-          <Text style={styles.selectionTitle}>已选择 {selectedIds.size} 项</Text>
+          <Text style={[styles.selectionTitle]}>已选择 {selectedIds.size} 项</Text>
           <TouchableOpacity onPress={handleSelectAll}>
             <Text style={styles.selectAllText}>
               {selectedIds.size === data?.passwords?.length ? '全不选' : '全选'}
@@ -223,10 +233,10 @@ export default function TrashScreen() {
 
     // 正常模式 Header
     return (
-      <View style={styles.headerContainer}>
+      <View style={[styles.headerContainer, { backgroundColor: theme.background }]}>
         <View>
-          <Text style={styles.headerTitle}>回收站</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>回收站</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
             {data.total || 0} 个项目 · {data.daysLeft || 30} 天后自动清除
           </Text>
         </View>
@@ -301,7 +311,11 @@ export default function TrashScreen() {
           onPress={() => onPress(item)}
           style={[
             styles.card,
-            isSelected && styles.cardSelected, // 选中时的样式变化
+            { backgroundColor: theme.background, borderColor: theme.border },
+            isSelected && [
+              styles.cardSelected,
+              { backgroundColor: theme.background, borderColor: theme.border },
+            ],
           ]}
         >
           <View style={styles.cardInner}>
@@ -319,7 +333,7 @@ export default function TrashScreen() {
             {/* 原有内容区 */}
             <View style={styles.cardContent}>
               <View style={styles.rowTop}>
-                <View style={styles.iconBox}>
+                <View style={[styles.iconBox, { backgroundColor: theme.card }]}>
                   <FontAwesome
                     name={item.category?.icon || 'lock'}
                     size={20}
@@ -327,14 +341,16 @@ export default function TrashScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.itemTitle} numberOfLines={1}>
+                  <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={1}>
                     {item.title}
                   </Text>
-                  <Text style={styles.categoryText}>{item.category?.name || '未分类'}</Text>
+                  <Text style={[styles.categoryText, { color: theme.textSecondary }]}>
+                    {item.category?.name || '未分类'}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: theme.divider }]} />
 
               <View style={styles.rowBottom}>
                 <Text
@@ -349,7 +365,7 @@ export default function TrashScreen() {
                 {!isSelectionMode && (
                   // 非多选模式下显示单独恢复按钮
                   <TouchableOpacity onPress={handleRestore} hitSlop={10}>
-                    <FontAwesome name="undo" size={20} color={COLORS.primary} />
+                    <FontAwesome name="undo" size={20} color={theme.textSecondary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -416,13 +432,18 @@ export default function TrashScreen() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
         {renderHeader()}
 
         {renderContent()}
         {/* 底部操作栏 (仅多选模式显示) */}
         {isSelectionMode && (
-          <View style={styles.bottomBar}>
+          <View
+            style={[
+              styles.bottomBar,
+              { backgroundColor: theme.background, borderTopColor: theme.border },
+            ]}
+          >
             <TouchableOpacity
               style={[styles.bottomBtn, styles.bottomBtnSecondary]}
               onPress={() => handleBatchAction('delete')}
@@ -461,10 +482,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 8,
   },
   headerTitle: { fontSize: 24, fontWeight: '700', color: COLORS.textMain },
   headerSubtitle: { fontSize: 12, color: COLORS.textSub, marginTop: 4 },
-  selectionTitle: { fontSize: 17, fontWeight: '600' },
+  selectionTitle: { fontSize: 17, fontWeight: '600', color: COLORS.textSub },
   cancelText: { fontSize: 16, color: COLORS.textSub },
   selectAllText: { fontSize: 16, color: COLORS.primary, fontWeight: '600' },
 
@@ -531,7 +553,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bottomBtnSecondary: { backgroundColor: '#FFF0F0', marginRight: 12 },
+  bottomBtnSecondary: { backgroundColor: '#ddd', marginRight: 12 },
   bottomBtnPrimary: { backgroundColor: COLORS.primary },
   bottomBtnText: { fontSize: 15, fontWeight: '600' },
   bottomBtnTextWhite: { fontSize: 15, fontWeight: '600', color: '#fff' },
