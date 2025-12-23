@@ -28,7 +28,7 @@ export default function PasswordFormModal({
   initialData = null, // 编辑模式下的初始数据
   categoryMap = null,
 }) {
-  const theme = useTheme()
+  const { theme } = useTheme()
   const { refreshCategories } = useCategoryContext()
   const [loadingSubmit, setLoadingSubmit] = useState(false)
   const [formParams, setFormParams] = useState({

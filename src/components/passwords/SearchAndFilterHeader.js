@@ -11,7 +11,7 @@ export default function SearchAndFilterHeader({
   onClearFilter,
   onOpenFilter,
 }) {
-  const theme = useTheme()
+  const { theme } = useTheme()
   const activeCat = categories.find((c) => c.id === activeCategory)
 
   return (

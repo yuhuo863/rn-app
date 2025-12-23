@@ -16,6 +16,7 @@ export const lightColors = {
   recycleBinGradient: ['rgba(59, 130, 246, 0.9)', 'rgba(59, 130, 246, 0.05)'],
   recycleBinRedGradient: ['rgba(239, 68, 68, 0.95)', 'rgba(239, 68, 68, 0.1)'],
   categoryAddModalBackground: 'rgba(255, 255, 255, 0.75)', // 浅色分类添加模态框背景
+  textInputBackground: '#F2F2F2',
 }
 
 export const darkColors = {
@@ -36,4 +37,5 @@ export const darkColors = {
   recycleBinGradient: ['rgba(59, 130, 246, 0.8)', 'rgba(59, 130, 246, 0.05)'],
   recycleBinRedGradient: ['rgba(239, 68, 68, 0.9)', 'rgba(239, 68, 68, 0.1)'],
   categoryAddModalBackground: 'rgba(30, 41, 59, 0.7)', // 深色分类添加模态框背景
+  textInputBackground: '#1e293b',
 }

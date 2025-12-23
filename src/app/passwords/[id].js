@@ -24,7 +24,7 @@ import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { useTheme } from '@/theme/useTheme'
 
 export default function Password() {
-  const theme = useTheme()
+  const { theme } = useTheme()
 
   const { id } = useLocalSearchParams()
   const router = useRouter()
@@ -306,10 +306,10 @@ export default function Password() {
     >
       <Stack.Screen
         options={{
-          title: '', // 隐藏默认标题，使用自定义头部
+          title: '密码详情', // 隐藏默认标题，使用自定义头部
           headerStyle: { backgroundColor: theme.card }, // 与背景同色
           headerShadowVisible: false, // 去掉阴影
-          headerTintColor: '#1e293b',
+          headerTintColor: theme.headerTint,
         }}
       />
       {renderContent()}

@@ -29,7 +29,7 @@ import { useTheme } from '@/theme/useTheme'
 const { width } = Dimensions.get('window')
 
 export default function Categories() {
-  const theme = useTheme()
+  const { theme } = useTheme()
   const {
     state: { categories: cats },
     dispatch,
@@ -301,10 +301,10 @@ export default function Categories() {
       onRequestClose={dismissActionSheet}
     >
       <Pressable style={styles.modalOverlay2} onPress={dismissActionSheet}>
-        <View style={styles.actionSheet}>
-          <View style={styles.sheetHandle} />
+        <View style={[styles.actionSheet, { backgroundColor: theme.card }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: theme.textSecondary }]} />
 
-          <Text style={styles.sheetTitle}>{selectedCategory?.name}</Text>
+          <Text style={[styles.sheetTitle, { color: theme.text }]}>{selectedCategory?.name}</Text>
 
           <TouchableOpacity
             style={[styles.actionBtnContainer]}
@@ -343,7 +343,7 @@ export default function Categories() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={dismissActionSheet}>
-            <Text style={styles.cancelBtnText}>取消操作</Text>
+            <Text style={[styles.cancelBtnText, { color: theme.textSecondary }]}>取消操作</Text>
           </TouchableOpacity>
         </View>
       </Pressable>
@@ -397,7 +397,10 @@ export default function Categories() {
                   styles.neuOuter,
                   { backgroundColor: theme.background },
                   isPressed && styles.neuOuterPressed,
-                  longPressActiveId === item.id && styles.neuOuterLongActive,
+                  longPressActiveId === item.id && [
+                    styles.neuOuterLongActive,
+                    { backgroundColor: theme.tabBarActiveTint },
+                  ],
                 ]}
               >
                 <View

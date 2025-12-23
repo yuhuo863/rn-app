@@ -1,6 +1,7 @@
 import React from 'react'
 import { Modal, TouchableOpacity, View, Text, ScrollView, StyleSheet, Platform } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
+import { useTheme } from '@/theme/useTheme'
 
 export default function CategoryFilterModal({
   visible,
@@ -10,12 +11,16 @@ export default function CategoryFilterModal({
   onReset,
   onClose,
 }) {
+  const { theme } = useTheme()
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={styles.bottomSheet}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={[styles.bottomSheet, { backgroundColor: theme.background }]}
+        >
           <View style={styles.header}>
-            <Text style={styles.title}>全部分类</Text>
+            <Text style={[styles.title, { color: theme.text }]}>全部分类</Text>
             <TouchableOpacity onPress={onReset}>
               <Text style={styles.resetText}>重置</Text>
             </TouchableOpacity>
@@ -28,7 +33,12 @@ export default function CategoryFilterModal({
                 style={[styles.item, activeCategory === cat.id && styles.itemActive]}
                 onPress={() => onSelect(cat.id)}
               >
-                <View style={[styles.iconBox, activeCategory === cat.id && styles.iconBoxActive]}>
+                <View
+                  style={[
+                    [styles.iconBox, { backgroundColor: theme.card }],
+                    activeCategory === cat.id && styles.iconBoxActive,
+                  ]}
+                >
                   <FontAwesome
                     name={cat.icon || 'folder'}
                     size={20}
@@ -36,7 +46,11 @@ export default function CategoryFilterModal({
                   />
                 </View>
                 <Text
-                  style={[styles.name, activeCategory === cat.id && styles.nameActive]}
+                  style={[
+                    styles.name,
+                    { color: theme.textSecondary },
+                    activeCategory === cat.id && styles.nameActive,
+                  ]}
                   numberOfLines={1}
                 >
                   {cat.name}

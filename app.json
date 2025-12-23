@@ -7,6 +7,14 @@
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 30
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "newArchEnabled": true,
     "splash": {
       "image": "./src/assets/splash-icon.png",
@@ -15,6 +23,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.yuhuo863.keyvault",
       "infoPlist": {
         "NSCameraUsageDescription": "This application requires Face ID permission to ensure your password security."
       }
@@ -24,11 +33,19 @@
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.yuhuo863.keyvault"
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
     },
-    "plugins": ["expo-secure-store", "expo-router"]
+    "plugins": ["expo-secure-store", "expo-router", "expo-font"],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "84e62ae3-7a51-4217-bee8-48ae9fe9c131"
+      }
+    },
+    "owner": "yuhuo"
   }
 }

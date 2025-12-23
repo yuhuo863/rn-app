@@ -13,7 +13,7 @@ function TabBarIcon(props) {
 }
 
 export default function TabLayout() {
-  const theme = useTheme()
+  const { theme } = useTheme()
   // iOS 使用原生液态玻璃 Tabs
   if (Platform.OS === 'ios') {
     return (
@@ -30,7 +30,7 @@ export default function TabLayout() {
           <Icon sf={{ default: 'trash', selected: 'trash.fill' }} />
           <Label>回收站</Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="(users)">
+        <NativeTabs.Trigger name="users">
           <Icon sf={{ default: 'person', selected: 'person.fill' }} />
           <Label>我的</Label>
         </NativeTabs.Trigger>

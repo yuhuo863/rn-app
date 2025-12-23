@@ -34,7 +34,7 @@ export default function DraggablePasswordCard({
   globalIsDragging,
   globalIsOverZone,
 }) {
-  const theme = useTheme()
+  const { theme } = useTheme()
   const router = useRouter()
   const translateX = useSharedValue(0)
   const translateY = useSharedValue(0)

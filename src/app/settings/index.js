@@ -1,23 +1,127 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { Alert, Platform, ScrollView, Share, StyleSheet } from 'react-native'
+import { TableView } from 'clwy-react-native-tableview-simple'
+import { Cell, Section } from '@/components/settings/TableView'
+import { useTheme } from '@/theme/useTheme'
+import { useEffect, useState } from 'react'
+import ThemeActionSheet from '@/components/settings/ThemeActionSheet'
+import { useRouter } from 'expo-router'
+import { useSession } from '@/utils/ctx'
+import { calculateAppCacheSize, clearAppCache } from '@/utils/cache'
+import apiService from '@/utils/request'
 
 export default function Index() {
+  const { signOut } = useSession()
+  const router = useRouter()
+  const { theme, themeMode } = useTheme()
+  const [cacheSize, setCacheSize] = useState('0 MB')
+  /**
+   * 弹出外观设置选择器
+   */
+  const [isSheetVisible, setSheetVisible] = useState(false)
+
+  const getModeLabel = (mode) => {
+    const labels = { system: '跟随系统', light: '浅色', dark: '深色' }
+    return labels[mode] || '跟随系统'
+  }
+
+  /**
+   * 分享
+   * @returns {Promise<void>}
+   */
+  const onShare = async () => {
+    const url = 'https://www.yuhuo863.top'
+    const message = Platform.OS === 'ios' ? 'KeyVault' : `KeyVault：\n${url}`
+
+    await Share.share({
+      title: 'KeyVault',
+      message, // iOS、Android 都支持
+      url, // 只有 iOS 支持
+    })
+  }
+  useEffect(() => {
+    const loadCacheSize = async () => {
+      const size = await calculateAppCacheSize()
+      setCacheSize(size)
+    }
+    loadCacheSize()
+  }, [])
+  /**
+   * 清理缓存
+   * @return {Promise<void>}
+   */
+  const handleClearCache = async () => {
+    try {
+      await clearAppCache()
+      const size = await calculateAppCacheSize()
+      setCacheSize(size)
+      Alert.alert('清理成功', '缓存已清除')
+    } catch (e) {
+      Alert.alert('清理失败', '请稍后重试')
+    }
+  }
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>这里是设置页</Text>
-    </View>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <TableView>
+        <Section>
+          <Cell title="关于 App" onPress={() => router.push('/settings/about')} />
+          <Cell title="密码生成器" onPress={() => router.push('/settings/generator')} />
+        </Section>
+
+        <Section>
+          <Cell
+            title="外观设置"
+            detail={getModeLabel(themeMode)}
+            cellStyle="RightDetail"
+            detailTextStyle={{ color: theme.textSecondary, fontSize: 14 }}
+            onPress={() => setSheetVisible(true)}
+          />
+          <Cell title="反馈建议" onPress={() => router.push('/settings/feedback')} />
+          <Cell title="分享好友" onPress={onShare} />
+          <Cell
+            title="注销账户"
+            onPress={() => {
+              Alert.alert(
+                '注销账户',
+                '注销后您的所有密码数据将被标记为已删除且无法登录。\n\n确定要注销吗？',
+                [
+                  { text: '取消', style: 'cancel' },
+                  {
+                    text: '确定注销',
+                    style: 'destructive',
+                    onPress: async () => {},
+                  },
+                ],
+              )
+            }}
+          />
+          <Cell
+            title="清理缓存"
+            detail={cacheSize}
+            cellStyle="RightDetail"
+            onPress={handleClearCache}
+          />
+        </Section>
+
+        <Section>
+          <Cell
+            title="安全退出"
+            titleTextColor="#ff9d9d"
+            onPress={() => {
+              router.navigate('/auth/sign-out')
+            }}
+          />
+        </Section>
+      </TableView>
+
+      <ThemeActionSheet visible={isSheetVisible} onClose={() => setSheetVisible(false)} />
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#4f9df7',
+    paddingHorizontal: 15,
+    backgroundColor: '#f2f2f2',
   },
 })

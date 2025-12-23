@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { Alert } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
+import { router } from 'expo-router'
 
 const apiService = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,

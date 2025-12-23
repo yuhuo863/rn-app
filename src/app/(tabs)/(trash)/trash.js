@@ -46,7 +46,7 @@ const COLORS = {
 }
 
 export default function TrashScreen() {
-  const theme = useTheme()
+  const { theme } = useTheme()
 
   const { data, loading, error, refreshing, onRefresh, onReload } = useFetchData('/password/trash')
   const { refreshCategories } = useCategoryContext()

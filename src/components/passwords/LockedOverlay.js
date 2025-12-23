@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur'
 import { useTheme } from '@/theme/useTheme'
 
 export default function LockedOverlay({ isLocked, onUnlock }) {
-  const theme = useTheme()
+  const { theme } = useTheme()
   if (!isLocked) return null
 
   const content = (

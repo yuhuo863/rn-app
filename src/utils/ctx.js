@@ -4,7 +4,6 @@ import { Alert } from 'react-native'
 
 import { useStorageState } from '@/hooks/useStorageState'
 import apiService from '@/utils/request'
-import { authStatus } from '@/utils/auth'
 
 const AuthContext = createContext({
   signIn: () => null,
@@ -50,9 +49,8 @@ export function SessionProvider({ children }) {
             )
           }
         },
-        signOut: () => {
-          setSession(null)
-          authStatus.isUnlocked = false
+        signOut: async () => {
+          await setSession(null)
         },
         session,
         isLoading,

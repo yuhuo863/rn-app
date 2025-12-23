@@ -32,7 +32,7 @@ import NetworkError from '@/components/shared/NetworkError'
 import { useTheme } from '@/theme/useTheme'
 
 export default function Index() {
-  const theme = useTheme()
+  const { theme } = useTheme()
 
   const { refresh, filterId, filterName } = useLocalSearchParams()
   const router = useRouter()

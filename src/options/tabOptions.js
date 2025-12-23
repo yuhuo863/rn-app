@@ -17,12 +17,12 @@ function LogoTitle() {
  */
 function HeaderButton(props) {
   const { name, ...rest } = props
-  const theme = useTheme()
+  const { theme } = useTheme()
 
   return (
     <Link asChild {...rest}>
       <TouchableOpacity>
-        <SimpleLineIcons size={20} color={theme.text} name={name} />
+        <SimpleLineIcons size={20} color={theme.textSecondary} name={name} />
       </TouchableOpacity>
     </Link>
   )

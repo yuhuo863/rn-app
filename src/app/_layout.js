@@ -5,62 +5,62 @@ import { SessionProvider } from '@/utils/ctx'
 import { CategoryProvider } from '@/utils/context/CategoryContext'
 import { SplashScreenController } from '@/utils/splash'
 import { RootSiblingParent } from 'react-native-root-siblings'
-import { useColorScheme, View } from 'react-native'
+import { ThemeProvider } from '@/utils/theme'
+import { useTheme } from '@/theme/useTheme'
 
-import { lightColors, darkColors } from '@/theme/colors'
-import { ThemeContext } from '@/theme/useTheme'
-
-// 根布局组件
-export default function Layout() {
-  const colorScheme = useColorScheme() // 'light' | 'dark' | null
-  const theme = colorScheme === 'dark' ? darkColors : lightColors
+function RootLayoutContent() {
+  const { theme } = useTheme()
 
   return (
-    <ThemeContext.Provider value={theme}>
-      <View style={{ flex: 1, backgroundColor: theme.background }}>
-        <CategoryProvider>
-          <SessionProvider>
-            <SplashScreenController />
-            <RootSiblingParent>
-              <Stack
-                screenOptions={{
-                  title: '', // 默认标题为空
-                  headerTitleAlign: 'center', // 安卓标题栏居中
-                  animation: 'slide_from_right', // 安卓使用左右切屏
-                  headerTintColor: theme.headerTint, // 导航栏中文字、按钮、图标的颜色
-                  // 标题组件的样式
-                  headerTitleStyle: {
-                    fontWeight: '400',
-                    color: theme.headerTint,
-                    fontSize: 16,
-                  },
-                  headerStyle: {
-                    backgroundColor: theme.headerBackground,
-                  },
-                  headerBackButtonDisplayMode: 'minimal', // 设置返回按钮只显示箭头，不显示 "Back"
-                }}
-              >
-                {/* Tabs */}
-                <Stack.Screen name="(tabs)" options={tabOptions} />
+    <CategoryProvider>
+      <SessionProvider>
+        <SplashScreenController />
+        <RootSiblingParent>
+          <Stack
+            screenOptions={{
+              title: '',
+              headerTitleAlign: 'center',
+              animation: 'slide_from_right',
+              headerTintColor: theme.headerTint,
+              headerTitleStyle: {
+                fontWeight: '400',
+                color: theme.headerTint,
+                fontSize: 16,
+              },
+              headerStyle: {
+                backgroundColor: theme.headerBackground,
+              },
+              headerBackButtonDisplayMode: 'minimal',
+              shadowColor: theme.shadowColor,
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={tabOptions} />
+            <Stack.Screen name="notices/index" options={{ title: '通知' }} />
+            <Stack.Screen name="settings/index" options={{ title: '设置' }} />
+            <Stack.Screen name="passwords/[id]" options={{ title: '密码详情' }} />
+            <Stack.Screen
+              name="notes/[id]"
+              options={{
+                title: '备注详情',
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+                headerLeft: () => <ModalCloseButton />,
+              }}
+            />
+            <Stack.Screen name="settings/feedback" options={{ title: '反馈建议' }} />
+            <Stack.Screen name="settings/about" options={{ title: '关于App' }} />
+            <Stack.Screen name="settings/generator" options={{ title: '密码生成器' }} />
+          </Stack>
+        </RootSiblingParent>
+      </SessionProvider>
+    </CategoryProvider>
+  )
+}
 
-                {/* Cards */}
-                <Stack.Screen name="notices/index" options={{ title: '通知' }} />
-                <Stack.Screen name="settings/index" options={{ title: '设置' }} />
-                <Stack.Screen name="passwords/[id]" options={{ title: '密码详情' }} />
-                <Stack.Screen
-                  name="notes/[id]"
-                  options={{
-                    title: '备注详情',
-                    presentation: 'modal',
-                    animation: 'slide_from_bottom',
-                    headerLeft: () => <ModalCloseButton />,
-                  }}
-                />
-              </Stack>
-            </RootSiblingParent>
-          </SessionProvider>
-        </CategoryProvider>
-      </View>
-    </ThemeContext.Provider>
+export default function Layout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   )
 }
