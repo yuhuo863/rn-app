@@ -32,7 +32,7 @@ export function Cell(props) {
       titleTextStyle={{ textAlign: 'left', fontSize: 17 }}
       titleTextColor={theme.textSecondary}
       contentContainerStyle={{ height: 55 }}
-      backgroundColor={theme.tabBarBackground}
+      backgroundColor={theme.card}
       detail="123"
       {...props}
     />

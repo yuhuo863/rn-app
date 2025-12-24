@@ -40,3 +40,30 @@ export const getCachedAvatarUri = async (userId, avatarUrl) => {
     return avatarUrl // 出错也 fallback 到网络 URL
   }
 }
+
+/**
+ * 清除指定用户的本地头像缓存
+ * @param {string|number} userId
+ */
+export const clearAvatarCache = async (userId) => {
+  if (!userId) return
+
+  try {
+    // 确保目录存在（避免报错）
+    const dirInfo = await LegacyFileSystem.getInfoAsync(AVATAR_CACHE_DIR)
+    if (!dirInfo.exists) return
+
+    // 获取缓存目录下的所有文件
+    const files = await LegacyFileSystem.readDirectoryAsync(AVATAR_CACHE_DIR)
+
+    // 找到该 userId 开头的文件（忽略后缀差异，如 .jpg 或 .png）并删除
+    const userFiles = files.filter((file) => file.startsWith(`${userId}.`))
+
+    for (const file of userFiles) {
+      await LegacyFileSystem.deleteAsync(`${AVATAR_CACHE_DIR}${file}`, { idempotent: true })
+      console.log('deleted')
+    }
+  } catch (error) {
+    console.error('清除头像缓存失败:', error)
+  }
+}

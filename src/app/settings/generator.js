@@ -8,7 +8,7 @@ import * as Clipboard from 'expo-clipboard'
 export default function PasswordGenerator() {
   const { theme } = useTheme()
 
-  const [length, setLength] = useState(16)
+  const [length, setLength] = useState(12)
   const [includeUppercase, setIncludeUppercase] = useState(true)
   const [includeLowercase, setIncludeLowercase] = useState(true)
   const [includeNumbers, setIncludeNumbers] = useState(true)
@@ -72,15 +72,20 @@ export default function PasswordGenerator() {
     Alert.alert('已复制', '密码已复制到剪贴板')
   }
 
-  const lengths = [8, 12, 16, 20, 24, 32]
+  const lengths = [8, 12, 16, 20]
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       <TableView>
         {/* 生成的密码 */}
         <Section header="生成的密码">
-          <View style={styles.passwordContainer}>
-            <Text style={styles.passwordText} selectable>
+          <View
+            style={[
+              styles.passwordContainer,
+              { backgroundColor: theme.background, borderColor: theme.border },
+            ]}
+          >
+            <Text style={[styles.passwordText, { color: theme.textSecondary }]} selectable>
               {generatedPassword || '点击下方生成密码'}
             </Text>
             {generatedPassword ? (
@@ -97,10 +102,22 @@ export default function PasswordGenerator() {
             {lengths.map((len) => (
               <TouchableOpacity
                 key={len}
-                style={[styles.lengthButton, length === len && styles.lengthButtonActive]}
+                style={[
+                  styles.lengthButton,
+                  { backgroundColor: theme.background, borderColor: theme.border },
+                  length === len && [
+                    styles.lengthButtonActive,
+                    { backgroundColor: theme.activeButton, borderColor: theme.border },
+                  ],
+                ]}
                 onPress={() => setLength(len)}
               >
-                <Text style={[styles.lengthText, length === len && styles.lengthTextActive]}>
+                <Text
+                  style={[
+                    styles.lengthText,
+                    length === len && [styles.lengthTextActive, { color: theme.text }],
+                  ]}
+                >
                   {len}
                 </Text>
               </TouchableOpacity>
@@ -116,7 +133,7 @@ export default function PasswordGenerator() {
               <Switch
                 value={includeUppercase}
                 onValueChange={setIncludeUppercase}
-                trackColor={{ false: '#ccc', true: '#e29447' }}
+                trackColor={{ false: theme.inactiveSwitch, true: theme.activeSwitch }}
                 thumbColor="#fff"
                 ios_backgroundColor="#ccc"
               />
@@ -128,7 +145,7 @@ export default function PasswordGenerator() {
               <Switch
                 value={includeLowercase}
                 onValueChange={setIncludeLowercase}
-                trackColor={{ false: '#ccc', true: '#e29447' }}
+                trackColor={{ false: theme.inactiveSwitch, true: theme.activeSwitch }}
                 thumbColor="#fff"
                 ios_backgroundColor="#ccc"
               />
@@ -140,7 +157,7 @@ export default function PasswordGenerator() {
               <Switch
                 value={includeNumbers}
                 onValueChange={setIncludeNumbers}
-                trackColor={{ false: '#ccc', true: '#e29447' }}
+                trackColor={{ false: theme.inactiveSwitch, true: theme.activeSwitch }}
                 thumbColor="#fff"
                 ios_backgroundColor="#ccc"
               />
@@ -152,7 +169,7 @@ export default function PasswordGenerator() {
               <Switch
                 value={includeSymbols}
                 onValueChange={setIncludeSymbols}
-                trackColor={{ false: '#ccc', true: '#e29447' }}
+                trackColor={{ false: theme.inactiveSwitch, true: theme.activeSwitch }}
                 thumbColor="#fff"
                 ios_backgroundColor="#ccc"
               />
@@ -165,7 +182,7 @@ export default function PasswordGenerator() {
               <Switch
                 value={avoidAmbiguous}
                 onValueChange={setAvoidAmbiguous}
-                trackColor={{ false: '#ccc', true: '#e29447' }}
+                trackColor={{ false: theme.inactiveSwitch, true: theme.activeSwitch }}
                 thumbColor="#fff"
                 ios_backgroundColor="#ccc"
               />
@@ -175,7 +192,10 @@ export default function PasswordGenerator() {
 
         {/* 生成按钮 */}
         <Section>
-          <TouchableOpacity style={styles.generateButton} onPress={generatePassword}>
+          <TouchableOpacity
+            style={[styles.generateButton, { backgroundColor: theme.buttonColor }]}
+            onPress={generatePassword}
+          >
             <Text style={styles.generateButtonText}>生成新密码</Text>
           </TouchableOpacity>
         </Section>

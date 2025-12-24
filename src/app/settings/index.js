@@ -7,10 +7,9 @@ import ThemeActionSheet from '@/components/settings/ThemeActionSheet'
 import { useRouter } from 'expo-router'
 import { useSession } from '@/utils/ctx'
 import { calculateAppCacheSize, clearAppCache } from '@/utils/cache'
-import apiService from '@/utils/request'
 
 export default function Index() {
-  const { signOut } = useSession()
+  const { destroyAccount } = useSession()
   const router = useRouter()
   const { theme, themeMode } = useTheme()
   const [cacheSize, setCacheSize] = useState('0 MB')
@@ -19,15 +18,21 @@ export default function Index() {
    */
   const [isSheetVisible, setSheetVisible] = useState(false)
 
+  // 显示当前外观模式
   const getModeLabel = (mode) => {
     const labels = { system: '跟随系统', light: '浅色', dark: '深色' }
     return labels[mode] || '跟随系统'
   }
+  // 初始化计算缓存大小
+  useEffect(() => {
+    const loadCacheSize = async () => {
+      const size = await calculateAppCacheSize()
+      setCacheSize(size)
+    }
+    loadCacheSize()
+  }, [])
 
-  /**
-   * 分享
-   * @returns {Promise<void>}
-   */
+  // 分享应用
   const onShare = async () => {
     const url = 'https://www.yuhuo863.top'
     const message = Platform.OS === 'ios' ? 'KeyVault' : `KeyVault：\n${url}`
@@ -38,17 +43,8 @@ export default function Index() {
       url, // 只有 iOS 支持
     })
   }
-  useEffect(() => {
-    const loadCacheSize = async () => {
-      const size = await calculateAppCacheSize()
-      setCacheSize(size)
-    }
-    loadCacheSize()
-  }, [])
-  /**
-   * 清理缓存
-   * @return {Promise<void>}
-   */
+
+  // 清理缓存
   const handleClearCache = async () => {
     try {
       await clearAppCache()
@@ -59,11 +55,28 @@ export default function Index() {
       Alert.alert('清理失败', '请稍后重试')
     }
   }
+  // 注销账户
+  const handleDestroyAccount = async () => {
+    try {
+      await destroyAccount()
+      Alert.alert('提示', '您的账户已注销。', [
+        {
+          text: 'OK',
+          onPress: () => {
+            router.navigate('/users')
+          },
+        },
+      ])
+    } catch (e) {
+      Alert.alert('错误', '账户注销失败，请稍后重试。')
+    }
+  }
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       <TableView>
         <Section>
           <Cell title="关于 App" onPress={() => router.push('/settings/about')} />
+          <Cell title="修改密码" onPress={() => router.push('/settings/change-password')} />
           <Cell title="密码生成器" onPress={() => router.push('/settings/generator')} />
         </Section>
 
@@ -80,18 +93,19 @@ export default function Index() {
           <Cell
             title="注销账户"
             onPress={() => {
-              Alert.alert(
-                '注销账户',
-                '注销后您的所有密码数据将被标记为已删除且无法登录。\n\n确定要注销吗？',
-                [
-                  { text: '取消', style: 'cancel' },
-                  {
-                    text: '确定注销',
-                    style: 'destructive',
-                    onPress: async () => {},
+              Alert.alert('重要警告', '注销后将无法再次登录，确定要注销吗？', [
+                { text: '取消', style: 'cancel' },
+                {
+                  text: '继续',
+                  onPress: () => {
+                    Alert.alert('真的注销吗？', '如操作失误，请在7日内联系管理员恢复。', [
+                      { text: '取消', style: 'cancel' },
+                      { text: '确认注销', onPress: handleDestroyAccount, style: 'destructive' },
+                    ])
                   },
-                ],
-              )
+                  style: 'destructive',
+                },
+              ])
             }}
           />
           <Cell

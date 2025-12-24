@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
+import { useTheme } from '@/theme/useTheme'
 
 export default function Note() {
+  const { theme } = useTheme()
   const { details } = useLocalSearchParams()
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Text style={styles.detail}>{details}</Text>
     </View>
   )

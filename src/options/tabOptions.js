@@ -1,8 +1,9 @@
 import { Link } from 'expo-router'
 import { Image } from 'expo-image'
 import { SimpleLineIcons } from '@expo/vector-icons'
-import { StyleSheet, TouchableOpacity } from 'react-native'
+import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useTheme } from '@/theme/useTheme'
+import { useNotifications } from '@/utils/context/NotificationContext'
 
 /**
  * 导航栏 Logo 组件
@@ -18,11 +19,22 @@ function LogoTitle() {
 function HeaderButton(props) {
   const { name, ...rest } = props
   const { theme } = useTheme()
+  const { hasUnread } = useNotifications()
 
   return (
     <Link asChild {...rest}>
       <TouchableOpacity>
-        <SimpleLineIcons size={20} color={theme.textSecondary} name={name} />
+        <View>
+          <SimpleLineIcons size={20} color={theme.textSecondary} name={name} />
+          {hasUnread && name === 'bell' && (
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: theme.primary, borderColor: theme.textSecondary },
+              ]}
+            />
+          )}
+        </View>
       </TouchableOpacity>
     </Link>
   )
@@ -48,5 +60,15 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: 8,
+    position: 'relative', // 使徽章定位相对于按钮
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
   },
 })

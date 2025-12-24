@@ -1,17 +1,11 @@
-import {
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  Alert,
-  AppState,
-  DeviceEventEmitter,
-} from 'react-native'
+import { StyleSheet, TouchableOpacity, Platform, Alert, AppState } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSharedValue } from 'react-native-reanimated'
 import * as ScreenCapture from 'expo-screen-capture'
+import * as SecureStore from 'expo-secure-store'
 import { FontAwesome } from '@expo/vector-icons'
 
 import useFetchData from '@/hooks/useFetchData'
@@ -30,9 +24,17 @@ import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 
 import { useTheme } from '@/theme/useTheme'
+import { useNotifications } from '@/utils/context/NotificationContext'
 
 export default function Index() {
   const { theme } = useTheme()
+  const { updateUnreadStatus } = useNotifications()
+  const { data: checkRes } = useFetchData('/notice/check')
+  useEffect(() => {
+    if (checkRes) {
+      updateUnreadStatus(checkRes.hasUnread)
+    }
+  }, [checkRes])
 
   const { refresh, filterId, filterName } = useLocalSearchParams()
   const router = useRouter()
@@ -70,6 +72,18 @@ export default function Index() {
       triggerAuth()
     }, [triggerAuth]),
   )
+  useFocusEffect(
+    useCallback(() => {
+      async function checkReload() {
+        const needsRefresh = await SecureStore.getItemAsync('passwordListNeedsRefresh')
+        if (needsRefresh) {
+          await onReload({ silent: true })
+          await SecureStore.deleteItemAsync('passwordListNeedsRefresh')
+        }
+      }
+      void checkReload()
+    }, []),
+  )
 
   useEffect(() => {
     if (filterId) {
@@ -78,13 +92,6 @@ export default function Index() {
       setActiveCategory(null)
     }
   }, [filterId])
-
-  useEffect(() => {
-    const sub = DeviceEventEmitter.addListener('app:password_updated', async () => {
-      await onReload({ silent: true })
-    })
-    return () => sub.remove()
-  }, [onReload])
 
   const handleClearFilter = () => {
     setActiveCategory(null)
@@ -150,7 +157,8 @@ export default function Index() {
     await apiService.delete(`/password/${id}`)
     await onReload({ silent: true })
     await refreshCategories() // 用于刷新分类列表对应分类的passwordsCount
-    DeviceEventEmitter.emit('app:password:deleted')
+    // 标记回收站页面需要刷新
+    await SecureStore.setItemAsync('recycleBinNeedsRefresh', 'true')
   }
 
   const [searchQuery, setSearchQuery] = useState('')

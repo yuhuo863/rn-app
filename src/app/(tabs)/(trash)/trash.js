@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   UIManager,
   Animated,
   Easing,
-  DeviceEventEmitter,
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -23,6 +22,8 @@ import NetworkError from '@/components/shared/NetworkError'
 import apiService from '@/utils/request'
 import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { useTheme } from '@/theme/useTheme'
+import { useFocusEffect } from 'expo-router'
+import * as SecureStore from 'expo-secure-store'
 
 // Android 开启 LayoutAnimation
 if (
@@ -70,14 +71,20 @@ export default function TrashScreen() {
     setSelectedIds(new Set())
   }
 
-  useEffect(() => {
-    const sub = DeviceEventEmitter.addListener('app:password:deleted', async () => {
-      setLocalDeletedIds(new Set())
-      await onReload({ silent: true }) // 捕获到删除事件后静默刷新
-    })
-
-    return () => sub.remove()
-  }, [onReload])
+  useFocusEffect(
+    useCallback(() => {
+      async function checkReload() {
+        const shouldReload = await SecureStore.getItemAsync('recycleBinNeedsRefresh')
+        if (shouldReload) {
+          await onReload({ silent: true })
+          await SecureStore.deleteItemAsync('recycleBinNeedsRefresh')
+          // 重置本地已删除 ID 集合
+          setLocalDeletedIds(new Set())
+        }
+      }
+      void checkReload()
+    }, []),
+  )
 
   useEffect(() => {
     const onBackPress = () => {
@@ -158,7 +165,7 @@ export default function TrashScreen() {
             } else {
               await apiService.post('/password/restore', { id: idsArray })
               await refreshCategories()
-              DeviceEventEmitter.emit('app:password_updated')
+              await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
             }
             // 此时不需要 Reload，界面已经是干净的了
             // await onReload()
@@ -384,7 +391,8 @@ export default function TrashScreen() {
       await apiService.post('/password/restore', { id: item.id })
       await onReload({ silent: true })
       await refreshCategories()
-      DeviceEventEmitter.emit('app:password_updated')
+      // 标记密码列表需要刷新
+      await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
     } catch (e) {
       // 如果失败了，把 ID 拿回来
       setLocalDeletedIds((prev) => {

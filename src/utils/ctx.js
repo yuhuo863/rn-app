@@ -7,7 +7,9 @@ import apiService from '@/utils/request'
 
 const AuthContext = createContext({
   signIn: () => null,
+  signUp: () => null,
   signOut: () => null,
+  destroyAccount: () => null,
   session: null,
   isLoading: false,
 })
@@ -29,6 +31,28 @@ export function SessionProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
+        signUp: async (formParams, setLoading) => {
+          try {
+            const data = await apiService.post('/auth/register', formParams)
+            await setSession(data.token)
+            Alert.alert('提示', '您已经注册成功。', [
+              {
+                text: 'OK',
+                onPress: () => {
+                  setLoading(false)
+                  router.navigate('/users')
+                },
+              },
+            ])
+          } catch (err) {
+            Alert.alert('错误', err.data.errors[0], [
+              {
+                text: 'OK',
+                onPress: () => setLoading(false),
+              },
+            ])
+          }
+        },
         signIn: async (formParams, setLoading) => {
           try {
             const data = await apiService.post('/auth/login', formParams)
@@ -50,6 +74,10 @@ export function SessionProvider({ children }) {
           }
         },
         signOut: async () => {
+          await setSession(null)
+        },
+        destroyAccount: async () => {
+          await apiService.delete('/user/me')
           await setSession(null)
         },
         session,

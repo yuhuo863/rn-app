@@ -7,7 +7,6 @@ import {
   Alert,
   Platform,
   Modal,
-  DeviceEventEmitter,
 } from 'react-native'
 import { Stack, Link, useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
@@ -22,6 +21,7 @@ import Toast from 'react-native-root-toast'
 import PasswordFormModal from '@/components/passwords/PasswordFormModal'
 import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { useTheme } from '@/theme/useTheme'
+import * as SecureStore from 'expo-secure-store'
 
 export default function Password() {
   const { theme } = useTheme()
@@ -292,7 +292,7 @@ export default function Password() {
           onClose={() => setEditVisible(false)}
           onSuccess={async () => {
             await onReload()
-            DeviceEventEmitter.emit('app:password_updated')
+            await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
           }}
         />
       </View>
