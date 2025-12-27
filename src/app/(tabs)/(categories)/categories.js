@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Text,
   StyleSheet,
@@ -20,31 +20,32 @@ import Loading from '@/components/shared/Loading'
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import apiService from '@/utils/request'
-import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { showConfirm } from '@/components/shared/CustomConfirm'
 import Toast from 'react-native-root-toast'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '@/theme/useTheme'
+import useCategoryStore from '@/stores/categories'
+import { ICON_OPTIONS, COLOR_OPTIONS } from '@/constants/categoryConfig'
+import * as SecureStore from 'expo-secure-store'
 
 const { width } = Dimensions.get('window')
 
 export default function Categories() {
   const { theme } = useTheme()
   const {
-    state: { categories: cats },
-    dispatch,
-    ACTION_TYPES,
-    isInitialized,
-    refreshCategories,
-  } = useCategoryContext()
-  const [searchQuery, setSearchQuery] = useState('')
+    isLoading,
+    setSearchQuery,
+    getFilteredCategories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+  } = useCategoryStore()
+  const categories = getFilteredCategories()
   const [actionVisible, setActionVisible] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
-
-  const categories = useMemo(() => {
-    if (!cats) return []
-    return cats.filter((cat) => cat.name?.toLowerCase().includes(searchQuery.toLowerCase().trim()))
-  }, [cats, searchQuery])
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [editingCategory, setEditingCategory] = useState({ name: '', icon: '', color: '' })
+  const [submitting, setSubmitting] = useState(false)
 
   const router = useRouter()
   const handleCategoryPress = (item) => {
@@ -76,11 +77,9 @@ export default function Categories() {
     </View>
   )
 
-  const [editModalVisible, setEditModalVisible] = useState(false)
-  const [editingCategory, setEditingCategory] = useState({ name: '', icon: '', color: '' })
   // 处理点击底部蓝色 "+" 按钮 (新增模式)
   const handleAddClick = () => {
-    setEditingCategory({ name: '', icon: 'folder', color: '#3b82f6' }) // 初始化为空数据
+    setEditingCategory({ name: '', icon: 'folder', color: '#2C3E50' })
     setEditModalVisible(true)
   }
   // 处理长按菜单中的“编辑”点击
@@ -90,7 +89,6 @@ export default function Categories() {
     setEditModalVisible(true) // 开启模态框
   }
 
-  const [submitting, setSubmitting] = useState(false)
   const handleFormSubmit = async () => {
     if (!editingCategory.name.trim()) {
       Alert.alert('提示', '请输入分类名称')
@@ -110,14 +108,15 @@ export default function Categories() {
       })
 
       if (isEdit) {
-        dispatch({ type: ACTION_TYPES.UPDATE_CATEGORY, payload: resultData.category })
+        // 标记回收站页面需要刷新
+        await SecureStore.setItemAsync('recycleBinNeedsRefresh', 'true')
+        updateCategory(resultData.category)
       } else {
-        dispatch({ type: ACTION_TYPES.ADD_CATEGORY, payload: resultData.newCategory })
+        addCategory(resultData.newCategory)
       }
 
       setEditModalVisible(false)
 
-      await refreshCategories()
       setEditingCategory({ name: '', icon: 'folder', color: '#3b82f6' })
     } catch (error) {
       console.error('error=>', error)
@@ -128,25 +127,10 @@ export default function Categories() {
     }
   }
   const CategoryFormModal = () => {
-    const iconOptions = [
-      'folder',
-      'id-card',
-      'globe',
-      'credit-card',
-      'shopping-cart',
-      'gamepad',
-      'users',
-      'envelope',
-    ]
-    const colorOptions = [
-      '#3b82f6', // 经典蓝
-      '#10b981', // 翡翠绿
-      '#f59e0b', // 琥珀橙
-      '#ef4444', // 胭脂红
-      '#8b5cf6', // 丁香紫
-      '#06b6d4', // 青金蓝
-      '#64748b', // 蓝灰色
-    ]
+    // 使用 useMemo 锁定常量，确保即使 Modal 重新渲染，这两个数组的引用地址也不会变
+    const memoIcons = useMemo(() => ICON_OPTIONS, [])
+    const memoColors = useMemo(() => COLOR_OPTIONS, [])
+
     const isEditMode = !!editingCategory?.id
 
     return (
@@ -204,38 +188,50 @@ export default function Categories() {
 
                   <View style={styles.inputSection}>
                     <Text style={styles.inputLabel}>视觉图标</Text>
-                    <View style={styles.iconGrid}>
-                      {iconOptions.map((iconName) => (
-                        <TouchableOpacity
-                          key={iconName}
-                          onPress={() => {
-                            setEditingCategory({ ...editingCategory, icon: iconName })
-                          }}
-                          style={[
-                            styles.iconBtn,
-                            { backgroundColor: theme.background },
-                            editingCategory.icon === iconName && {
-                              borderColor: '#3b82f6',
-                              borderWidth: 3,
-                            },
-                          ]}
-                        >
-                          <FontAwesome
-                            name={iconName}
-                            size={20}
-                            color={
-                              editingCategory.icon === iconName ? editingCategory.color : '#94a3b8'
-                            }
-                          />
-                        </TouchableOpacity>
-                      ))}
+                    <View style={[styles.iconScrollContainer, { borderColor: theme.border }]}>
+                      <ScrollView
+                        nestedScrollEnabled={true} // 允许在父ScrollView中滚动 仅支持 Android Level 21 以上版本
+                        showsVerticalScrollIndicator={true}
+                        contentContainerStyle={styles.iconGrid}
+                      >
+                        {memoIcons.map((iconName) => (
+                          <TouchableOpacity
+                            key={iconName}
+                            onPress={() => {
+                              setEditingCategory({ ...editingCategory, icon: iconName })
+                            }}
+                            style={[
+                              styles.iconBtn,
+                              { backgroundColor: theme.background },
+                              editingCategory.icon === iconName && {
+                                borderColor: editingCategory.color,
+                                borderWidth: 3,
+                              },
+                            ]}
+                          >
+                            <FontAwesome
+                              name={iconName}
+                              size={24}
+                              color={
+                                editingCategory.icon === iconName
+                                  ? editingCategory.color
+                                  : `${theme.textSecondary}80`
+                              }
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
                     </View>
                   </View>
 
                   <View style={styles.inputSection}>
                     <Text style={styles.inputLabel}>分类色标</Text>
-                    <View style={styles.colorGrid}>
-                      {colorOptions.map((color) => (
+                    <ScrollView
+                      horizontal={true}
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.colorScrollContent}
+                    >
+                      {memoColors.map((color) => (
                         <TouchableOpacity
                           key={color}
                           onPress={() => {
@@ -248,11 +244,11 @@ export default function Categories() {
                           ]}
                         >
                           {editingCategory.color === color && (
-                            <Ionicons name="checkmark" size={16} color="#fff" />
+                            <Ionicons name="checkmark" size={22} color="#fff" />
                           )}
                         </TouchableOpacity>
                       ))}
-                    </View>
+                    </ScrollView>
                   </View>
 
                   <TouchableOpacity
@@ -357,7 +353,8 @@ export default function Categories() {
       onConfirm: async () => {
         try {
           await apiService.delete(`category/${item.id}`)
-          dispatch({ type: ACTION_TYPES.DELETE_CATEGORY, payload: item.id })
+          // dispatch({ type: ACTION_TYPES.DELETE_CATEGORY, payload: item.id })
+          deleteCategory(item.id)
         } catch (e) {
           Toast.show(e.data.errors[0], {
             position: 0,
@@ -373,8 +370,17 @@ export default function Categories() {
   }
 
   const [pressedId, setPressedId] = useState(null)
+  const getIconStyle = (color) => ({
+    backgroundColor: `${color}20`, // 1. 引入 12% 左右的背景填充，增加视觉面积
+    borderColor: `${color}40`, // 2. 稍微明显的边框强化边缘
+    borderWidth: 1,
+    shadowColor: color, // 3. 颜色光晕补偿
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  })
   const renderContent = () => {
-    if (!isInitialized) return <Loading />
+    if (isLoading) return <Loading />
 
     return (
       <View style={styles.gravityGrid}>
@@ -420,14 +426,13 @@ export default function Categories() {
                   </View>
                   <View
                     style={[
-                      styles.iconBox,
-                      { backgroundColor: theme.background, borderColor: theme.border },
+                      [styles.iconBox, getIconStyle(item.color)],
                       isLarge ? styles.iconLarge : styles.iconSmall,
                     ]}
                   >
                     <FontAwesome
                       name={item.icon || 'folder'}
-                      size={isLarge ? 30 : 20}
+                      size={isLarge ? 30 : 22}
                       color={item.color || '#3b82f6'}
                     />
                   </View>
@@ -617,6 +622,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(224, 229, 236, 0.85)',
+    backdropFilter: 'blur(12px)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   dockBaseShadow: {
     width: 80,
@@ -739,33 +747,45 @@ const styles = StyleSheet.create({
   },
   textInput: { color: '#1e293b', fontSize: 16, fontWeight: '600' },
 
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  iconScrollContainer: {
+    height: 203,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    borderStyle: 'dashed',
+  },
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
   iconBtn: {
     width: (width - 100) / 4, // 动态计算 4 列布局
     height: 55,
-    borderRadius: 15,
-    backgroundColor: '#E0E5EC',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  colorGrid: {
+
+  // 修改: 颜色网格容器 (移除 flexWrap，改为横向排列的 padding)
+  colorScrollContent: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: 6,
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 5, // 左右留白
+    paddingVertical: 5, // 上下留白给放大效果
   },
+
   colorCircle: {
-    width: 36,
-    height: 36,
+    width: 37,
+    height: 37,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   colorCircleActive: {
-    borderWidth: 3,
-    borderColor: '#fff',
-    transform: [{ scale: 1.2 }],
-    // 增加颜色发光感
+    transform: [{ scale: 1.1 }],
     shadowOpacity: 0.4,
     shadowRadius: 8,
   },

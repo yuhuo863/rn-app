@@ -43,6 +43,8 @@ export const lightColors = {
 
   selectedOption: '#818cf8', // indigo-200，柔和高亮
   avatarBackground: '#e2e8f0',
+
+  categoryAddModalBackground: 'rgba(255, 255, 255, 0.7)',
 }
 
 export const darkColors = {
@@ -90,4 +92,6 @@ export const darkColors = {
 
   selectedOption: '#4f46e5', // 中等 indigo，选中反馈强
   avatarBackground: '#334155',
+
+  categoryAddModalBackground: 'rgba(30, 41, 59, 0.7)',
 }

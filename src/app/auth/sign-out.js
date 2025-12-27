@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'expo-router'
 
 import { useSession } from '@/utils/ctx'
+import useCategoryStore from '@/stores/categories'
 import Loading from '@/components/shared/Loading'
 
 export default function SignOut() {
@@ -11,6 +12,7 @@ export default function SignOut() {
   useEffect(() => {
     const handleSignOut = async () => {
       await signOut()
+      useCategoryStore.getState().reset()
       router.navigate('/users')
     }
 

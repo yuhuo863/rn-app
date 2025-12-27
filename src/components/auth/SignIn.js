@@ -103,7 +103,7 @@ export default function SignIn(props) {
 
       <View style={styles.noticeWrapper}>
         <Text style={styles.notice}>新用户请从这里开始 </Text>
-        <MaterialCommunityIcons name={'arrow-right'} size={25} color={'#fff'} />
+        <MaterialCommunityIcons name={'arrow-right'} size={22} color={'#fff'} />
         <TouchableOpacity onPress={() => setSelected('signUp')}>
           <Text style={styles.noticeLink}>注册</Text>
         </TouchableOpacity>
@@ -211,6 +211,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
 })

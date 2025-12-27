@@ -16,9 +16,9 @@ import { Picker } from '@react-native-picker/picker'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import apiService from '@/utils/request'
 import Loading from '@/components/shared/Loading'
-import { useCategoryContext } from '@/utils/context/CategoryContext'
 
 import { useTheme } from '@/theme/useTheme'
+import useCategoryStore from '@/stores/categories'
 
 export default function PasswordFormModal({
   visible,
@@ -29,7 +29,7 @@ export default function PasswordFormModal({
   categoryMap = null,
 }) {
   const { theme } = useTheme()
-  const { refreshCategories } = useCategoryContext()
+  const { fetchCategories } = useCategoryStore()
   const [loadingSubmit, setLoadingSubmit] = useState(false)
   const [formParams, setFormParams] = useState({
     title: '',
@@ -79,7 +79,7 @@ export default function PasswordFormModal({
         await apiService.post('/password', formParams)
       }
 
-      await refreshCategories() //
+      await fetchCategories() // 更新分类列表
 
       onSuccess()
       onClose()

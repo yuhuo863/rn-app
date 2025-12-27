@@ -8,11 +8,10 @@ import * as ScreenCapture from 'expo-screen-capture'
 import * as SecureStore from 'expo-secure-store'
 import { FontAwesome } from '@expo/vector-icons'
 
-import useFetchData from '@/hooks/useFetchData'
 import apiService from '@/utils/request'
 import { authStatus } from '@/utils/auth'
-import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { performBiometricAuth } from '@/utils/auth'
+import { useNotifications } from '@/utils/context/NotificationContext'
 
 import RecycleBin from '@/components/passwords/RecycleBin'
 import LockedOverlay from '@/components/passwords/LockedOverlay'
@@ -23,8 +22,9 @@ import PasswordFormModal from '@/components/passwords/PasswordFormModal'
 import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 
+import useFetchData from '@/hooks/useFetchData'
 import { useTheme } from '@/theme/useTheme'
-import { useNotifications } from '@/utils/context/NotificationContext'
+import useCategoryStore from '@/stores/categories'
 
 export default function Index() {
   const { theme } = useTheme()
@@ -138,11 +138,12 @@ export default function Index() {
     }
   }, [triggerAuth])
 
-  const {
-    state: { categories },
-    isInitialized,
-    refreshCategories,
-  } = useCategoryContext()
+  const { categories, isLoading, fetchCategories } = useCategoryStore()
+  useEffect(() => {
+    if (!isLoading) {
+      fetchCategories()
+    }
+  }, [])
 
   // 全局共享状态：是否正在拖拽？(用于控制垃圾桶显示)
   // 0 = 无拖拽, 1 = 正在拖拽
@@ -156,7 +157,7 @@ export default function Index() {
   const handleDelete = async (id) => {
     await apiService.delete(`/password/${id}`)
     await onReload({ silent: true })
-    await refreshCategories() // 用于刷新分类列表对应分类的passwordsCount
+    await fetchCategories() // 用于刷新分类列表对应分类的passwordsCount
     // 标记回收站页面需要刷新
     await SecureStore.setItemAsync('recycleBinNeedsRefresh', 'true')
   }
@@ -209,7 +210,7 @@ export default function Index() {
           />
 
           {/* 可拖拽的密码列表 */}
-          {loading || !isInitialized ? (
+          {loading || isLoading ? (
             <Loading />
           ) : error ? (
             <NetworkError onReload={onReload} />
@@ -231,7 +232,7 @@ export default function Index() {
             activeOpacity={0.8}
             onPress={() => setModalVisible(true)}
           >
-            <FontAwesome name="plus" size={24} color={theme.text} />
+            <FontAwesome name="plus" size={24} color={theme.primary} />
           </TouchableOpacity>
 
           {/* 锁定遮罩 */}

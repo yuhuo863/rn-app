@@ -98,6 +98,21 @@ export default function DraggablePasswordCard({
     opacity: opacity.value,
   }))
 
+  const getDynamicIconBg = (categoryColor) => {
+    const baseColor = categoryColor || '#3b82f6'
+
+    return {
+      // 1. 使用 15% 透明度的分类颜色作为背景 (十六进制末尾加 26)
+      backgroundColor: `${baseColor}26`,
+
+      // 2. 动态光影效果 (针对 iOS)
+      shadowColor: baseColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+    }
+  }
+
   return (
     <GestureDetector gesture={pan}>
       <Animated.View style={[styles.wrapper, animatedStyle]}>
@@ -108,7 +123,7 @@ export default function DraggablePasswordCard({
         >
           <View style={styles.card}>
             <View style={styles.header}>
-              <View style={[styles.iconContainer, { backgroundColor: theme.iconContainer }]}>
+              <View style={[styles.iconContainer, getDynamicIconBg(item.category?.color)]}>
                 <FontAwesome
                   name={item.category?.icon || 'lock'}
                   size={20}
@@ -174,7 +189,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#eff6ff',
     justifyContent: 'center',
     alignItems: 'center',
   },

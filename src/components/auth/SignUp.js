@@ -20,7 +20,6 @@ export default function SignUp(props) {
   const [formParams, setFormParams] = useState({
     email: '',
     username: '',
-    nickname: '',
     password: '',
   })
   const [loading, setLoading] = useState(false)
@@ -30,12 +29,20 @@ export default function SignUp(props) {
    * @param text 输入的内容
    * @param name 表单字段名
    */
-  const onChangeText = (text, name) => {}
+  const onChangeText = (text, name) => {
+    setFormParams((prev) => ({
+      ...prev,
+      [name]: text,
+    }))
+  }
 
   /**
    * 提交表单
    */
-  const handleSubmit = () => {}
+  const handleSubmit = () => {
+    setLoading(true)
+    signUp(formParams, setLoading)
+  }
 
   return (
     <View style={styles.container}>
@@ -48,14 +55,14 @@ export default function SignUp(props) {
           </TouchableOpacity>
         </Link>
 
-        <Text style={styles.title}>会员注册</Text>
+        <Text style={styles.title}>注册</Text>
         <View style={styles.form}>
           <View style={styles.formGroup}>
             <Text style={styles.label}>电子邮箱</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={[styles.input]}
-                placeholder="例）name@clwy.cn"
+                placeholder="例）name@example.com"
                 keyboardType={'email-address'}
                 autoCapitalize={'none'}
                 autoCorrect={false}
@@ -78,25 +85,10 @@ export default function SignUp(props) {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>昵称</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input]}
-                placeholder="中文、英文或数字，不含特殊字符"
-                keyboardType={'email-address'}
-                autoCapitalize={'none'}
-                autoCorrect={false}
-                onChangeText={(text) => onChangeText(text, 'nickname')}
-              />
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
             <Text style={styles.label}>密码</Text>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={[styles.input]}
-                placeholder="・・・・・・・・"
                 autoCapitalize={'none'}
                 autoCorrect={false}
                 secureTextEntry={hidePassword}
@@ -113,6 +105,19 @@ export default function SignUp(props) {
               </TouchableWithoutFeedback>
             </View>
           </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>确认密码</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.input]}
+                keyboardType={'email-address'}
+                autoCapitalize={'none'}
+                autoCorrect={false}
+                onChangeText={(text) => onChangeText(text, 'confirmPassword')}
+              />
+            </View>
+          </View>
         </View>
 
         <TouchableWithoutFeedback onPress={handleSubmit}>
@@ -124,9 +129,9 @@ export default function SignUp(props) {
 
       <View style={styles.noticeWrapper}>
         <Text style={styles.notice}>已经拥有帐户了？ </Text>
-        <MaterialCommunityIcons name={'arrow-right'} size={25} color={'#fff'} />
+        <MaterialCommunityIcons name={'arrow-right'} size={22} color={'#fff'} />
         <TouchableOpacity onPress={() => setSelected('signIn')}>
-          <Text style={styles.noticeLink}>会员登录</Text>
+          <Text style={styles.noticeLink}>登录</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -232,6 +237,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
 })

@@ -19,9 +19,9 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Clipboard from 'expo-clipboard'
 import Toast from 'react-native-root-toast'
 import PasswordFormModal from '@/components/passwords/PasswordFormModal'
-import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { useTheme } from '@/theme/useTheme'
 import * as SecureStore from 'expo-secure-store'
+import useCategoryStore from '@/stores/categories'
 
 export default function Password() {
   const { theme } = useTheme()
@@ -33,17 +33,14 @@ export default function Password() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
 
   const [editVisible, setEditVisible] = useState(false)
-  const {
-    state: { categories },
-    refreshCategories,
-  } = useCategoryContext()
+  const { categories, fetchCategories } = useCategoryStore()
 
   const handleDelete = async () => {
     setDeleteModalVisible(false)
     setDeleting(true)
     try {
       await apiService.delete(`/password/${id}`)
-      await refreshCategories() // 用于刷新分类列表对应分类的passwordsCount
+      await fetchCategories() // 用于刷新分类列表对应分类的passwordsCount
 
       setDeleting(false)
       setDeleteModalVisible(false)

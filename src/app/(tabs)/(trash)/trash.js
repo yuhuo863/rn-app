@@ -20,10 +20,10 @@ import useFetchData from '@/hooks/useFetchData'
 import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 import apiService from '@/utils/request'
-import { useCategoryContext } from '@/utils/context/CategoryContext'
 import { useTheme } from '@/theme/useTheme'
 import { useFocusEffect } from 'expo-router'
 import * as SecureStore from 'expo-secure-store'
+import useCategoryStore from '@/stores/categories'
 
 // Android 开启 LayoutAnimation
 if (
@@ -50,7 +50,7 @@ export default function TrashScreen() {
   const { theme } = useTheme()
 
   const { data, loading, error, refreshing, onRefresh, onReload } = useFetchData('/password/trash')
-  const { refreshCategories } = useCategoryContext()
+  const { fetchCategories } = useCategoryStore()
 
   // --- 多选模式状态 ---
   const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -164,11 +164,9 @@ export default function TrashScreen() {
               await apiService.post('/password/force', { id: idsArray })
             } else {
               await apiService.post('/password/restore', { id: idsArray })
-              await refreshCategories()
+              await fetchCategories()
               await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
             }
-            // 此时不需要 Reload，界面已经是干净的了
-            // await onReload()
           } catch (e) {
             await onReload()
             Alert.alert('操作失败', e.data.errors[0])
@@ -390,7 +388,7 @@ export default function TrashScreen() {
     try {
       await apiService.post('/password/restore', { id: item.id })
       await onReload({ silent: true })
-      await refreshCategories()
+      await fetchCategories()
       // 标记密码列表需要刷新
       await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
     } catch (e) {

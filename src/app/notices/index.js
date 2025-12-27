@@ -4,7 +4,6 @@ import { useTheme } from '@/theme/useTheme'
 import useFetchData from '@/hooks/useFetchData'
 import NetworkError from '@/components/shared/NetworkError'
 import { useEffect } from 'react'
-import * as SecureStore from 'expo-secure-store'
 import { useNotifications } from '@/utils/context/NotificationContext'
 
 // 1. 时间格式化工具函数
