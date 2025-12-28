@@ -3,6 +3,7 @@ export const lightColors = {
   background: '#f8fafc', // slate-50，温暖舒适的白灰（浅色模式优秀）
   card: '#ffffff',
   surface: '#ffffff',
+  noticeBackground: '#ffffff',
 
   // --- 文字系统 ---
   text: '#0f172a', // slate-900，高对比
@@ -49,13 +50,14 @@ export const lightColors = {
 
 export const darkColors = {
   // --- 基础层级 ---
-  background: '#0f172a', // slate-900，深邃但不压抑（关键改进）
+  background: '#0f172a', // slate-900，深邃但不压抑
   card: '#1e293b', // slate-800，有明显浮起感
   surface: '#1e293b',
+  noticeBackground: '#0F1115',
 
   // --- 文字系统 ---
   text: '#f8fafc', // slate-50
-  textSecondary: '#cbd5e1', // slate-300（原 slate-400 太暗）
+  textSecondary: '#cbd5e1', // slate-300
   textTertiary: '#64748b', // slate-500
 
   // --- 品牌色 ---

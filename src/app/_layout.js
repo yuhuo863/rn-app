@@ -34,13 +34,22 @@ function RootLayoutContent() {
             }}
           >
             <Stack.Screen name="(tabs)" options={tabOptions} />
-            <Stack.Screen name="notices/index" options={{ title: '通知' }} />
+            <Stack.Screen name="notices/index" options={{ title: '通知中心' }} />
             <Stack.Screen name="passwords/[id]" options={{ title: '密码详情' }} />
             <Stack.Screen
               name="notes/[id]"
               options={{
                 title: '备注详情',
                 presentation: 'modal',
+                animation: 'slide_from_bottom',
+                headerLeft: () => <ModalCloseButton />,
+              }}
+            />
+            <Stack.Screen
+              name="notices/[id]"
+              options={{
+                title: '通知详情',
+                presentation: 'modal', // 设置为模态窗口样式，从底部滑入
                 animation: 'slide_from_bottom',
                 headerLeft: () => <ModalCloseButton />,
               }}

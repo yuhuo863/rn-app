@@ -1,10 +1,19 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native'
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/theme/useTheme'
 import useFetchData from '@/hooks/useFetchData'
 import NetworkError from '@/components/shared/NetworkError'
 import { useEffect } from 'react'
 import { useNotifications } from '@/utils/context/NotificationContext'
+import { router } from 'expo-router'
 
 // 1. 时间格式化工具函数
 const formatTime = (dateString) => {
@@ -48,7 +57,14 @@ const getNoticeConfig = (type, theme) => {
 
 export default function NotificationList() {
   const { theme } = useTheme()
-  const { data: noticesData, loading, error, onReload } = useFetchData('/notice')
+  const {
+    data: noticesData,
+    loading,
+    refreshing,
+    onRefresh,
+    error,
+    onReload,
+  } = useFetchData('/notice')
   const { clearUnread } = useNotifications()
   useEffect(() => {
     clearUnread()
@@ -58,7 +74,10 @@ export default function NotificationList() {
     const config = getNoticeConfig(item.type, theme)
 
     return (
-      <TouchableOpacity style={[styles.card, { backgroundColor: theme.card }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.card }]}
+        onPress={() => router.navigate(`/notices/${item.id}`)}
+      >
         {/* 左侧图标 */}
         <View style={[styles.iconBox, { backgroundColor: config.bgColor }]}>
           <Ionicons name={config.icon} size={22} color={config.iconColor} />
@@ -73,7 +92,7 @@ export default function NotificationList() {
             </Text>
           </View>
           <Text style={[styles.itemContent, { color: theme.textSecondary }]} numberOfLines={2}>
-            {item.content}
+            {item.content.replace(/\\n/g, '\n')}
           </Text>
         </View>
       </TouchableOpacity>
@@ -99,6 +118,13 @@ export default function NotificationList() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listPadding}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.textTertiary}
+          />
+        }
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', color: theme.textSecondary, marginTop: 50 }}>
             暂无通知
@@ -141,7 +167,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', // 确保标题和时间水平对齐
     marginBottom: 6,
   },
-  itemTitle: { fontSize: 16, fontWeight: '700' },
+  itemTitle: { fontSize: 16, fontWeight: '700', width: '80%' },
   timeText: { fontSize: 12 },
   itemContent: { fontSize: 14, lineHeight: 20 },
 })

@@ -1,10 +1,18 @@
 import { ActivityIndicator, StyleSheet } from 'react-native'
+import { useTheme } from '@/theme/useTheme'
 
 /**
  * 加载中组件
  */
 export default function Loading() {
-  return <ActivityIndicator size="small" color="#1f99b0" style={styles.loading} />
+  const theme = useTheme()
+  return (
+    <ActivityIndicator
+      size="large"
+      color="#1f99b0"
+      style={[styles.loading, { backgroundColor: theme.background }]}
+    />
+  )
 }
 
 const styles = StyleSheet.create({

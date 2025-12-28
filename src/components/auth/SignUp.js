@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { KeyboardProvider, KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 
 import { useSession } from '@/utils/ctx'
 import Loading from '@/components/shared/Loading'
@@ -45,96 +46,102 @@ export default function SignUp(props) {
   }
 
   return (
-    <View style={styles.container}>
-      {loading && <Loading />}
+    <KeyboardProvider>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        bottomOffset={200} // 键盘弹出时，距离底部的偏移量
+        contentContainerStyle={styles.contentContainer}
+      >
+        {loading && <Loading />}
 
-      <View style={styles.content}>
-        <Link href="../" asChild>
-          <TouchableOpacity>
-            <Text style={styles.cancel}>跳过</Text>
-          </TouchableOpacity>
-        </Link>
+        <View style={styles.content}>
+          <Link href="../" asChild>
+            <TouchableOpacity>
+              <Text style={styles.cancel}>跳过</Text>
+            </TouchableOpacity>
+          </Link>
 
-        <Text style={styles.title}>注册</Text>
-        <View style={styles.form}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>电子邮箱</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input]}
-                placeholder="例）name@example.com"
-                keyboardType={'email-address'}
-                autoCapitalize={'none'}
-                autoCorrect={false}
-                onChangeText={(text) => onChangeText(text, 'email')}
-              />
+          <Text style={styles.title}>注册</Text>
+          <View style={styles.form}>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>电子邮箱</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input]}
+                  placeholder="例）name@example.com"
+                  keyboardType={'email-address'}
+                  autoCapitalize={'none'}
+                  autoCorrect={false}
+                  onChangeText={(text) => onChangeText(text, 'email')}
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>用户名</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input]}
+                  placeholder="英文或数字, 至少5位, 不能以数字开头"
+                  autoCapitalize={'none'}
+                  autoCorrect={false}
+                  onChangeText={(text) => onChangeText(text, 'username')}
+                />
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>密码</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input]}
+                  autoCapitalize={'none'}
+                  autoCorrect={false}
+                  secureTextEntry={hidePassword}
+                  onChangeText={(text) => onChangeText(text, 'password')}
+                />
+                <TouchableWithoutFeedback onPress={() => setHidePassword(!hidePassword)}>
+                  <View style={styles.eyeIcon}>
+                    <MaterialCommunityIcons
+                      name={hidePassword ? 'eye-off' : 'eye-outline'}
+                      size={24}
+                      color={'#333'}
+                    />
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>确认密码</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={[styles.input]}
+                  keyboardType={'email-address'}
+                  autoCapitalize={'none'}
+                  autoCorrect={false}
+                  onChangeText={(text) => onChangeText(text, 'confirmPassword')}
+                />
+              </View>
             </View>
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>用户名</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input]}
-                placeholder="英文或数字，5位以上，不能以数字开头"
-                autoCapitalize={'none'}
-                autoCorrect={false}
-                onChangeText={(text) => onChangeText(text, 'username')}
-              />
+          <TouchableWithoutFeedback onPress={handleSubmit}>
+            <View style={styles.submitWrapper}>
+              <Text style={styles.submit}>注册</Text>
             </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>密码</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input]}
-                autoCapitalize={'none'}
-                autoCorrect={false}
-                secureTextEntry={hidePassword}
-                onChangeText={(text) => onChangeText(text, 'password')}
-              />
-              <TouchableWithoutFeedback onPress={() => setHidePassword(!hidePassword)}>
-                <View style={styles.eyeIcon}>
-                  <MaterialCommunityIcons
-                    name={hidePassword ? 'eye-off' : 'eye-outline'}
-                    size={24}
-                    color={'#333'}
-                  />
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>确认密码</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input]}
-                keyboardType={'email-address'}
-                autoCapitalize={'none'}
-                autoCorrect={false}
-                onChangeText={(text) => onChangeText(text, 'confirmPassword')}
-              />
-            </View>
-          </View>
+          </TouchableWithoutFeedback>
         </View>
 
-        <TouchableWithoutFeedback onPress={handleSubmit}>
-          <View style={styles.submitWrapper}>
-            <Text style={styles.submit}>注册</Text>
-          </View>
-        </TouchableWithoutFeedback>
-      </View>
-
-      <View style={styles.noticeWrapper}>
-        <Text style={styles.notice}>已经拥有帐户了？ </Text>
-        <MaterialCommunityIcons name={'arrow-right'} size={22} color={'#fff'} />
-        <TouchableOpacity onPress={() => setSelected('signIn')}>
-          <Text style={styles.noticeLink}>登录</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.noticeWrapper}>
+          <Text style={styles.notice}>已经拥有帐户了？ </Text>
+          <MaterialCommunityIcons name={'arrow-right'} size={22} color={'#fff'} />
+          <TouchableOpacity onPress={() => setSelected('signIn')}>
+            <Text style={styles.noticeLink}>登录</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAwareScrollView>
+    </KeyboardProvider>
   )
 }
 
@@ -143,6 +150,9 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     backgroundColor: '#fff',
+  },
+  contentContainer: {
+    paddingBottom: 40,
   },
   content: {
     paddingHorizontal: 20,
@@ -221,7 +231,7 @@ const styles = StyleSheet.create({
   },
   noticeWrapper: {
     position: 'absolute',
-    bottom: 34,
+    bottom: -68,
     height: 48,
     width: '100%',
     flexDirection: 'row',
