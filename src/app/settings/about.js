@@ -16,10 +16,10 @@ export default function About() {
       if (supported) {
         await Linking.openURL(url)
       } else {
-        console.warn('无法打开链接:', url)
+        Alert.alert('无法打开链接', `无法处理此 URL: ${url}`)
       }
     } catch (error) {
-      console.error('打开链接失败:', error)
+      Alert.alert('错误', '无法打开该 URL')
     }
   }
 
@@ -54,7 +54,6 @@ export default function About() {
       }
     } catch (error) {
       Alert.alert('检查失败', '无法连接到更新服务器，请检查网络后重试')
-      console.error('更新检查错误:', error)
     }
   }
 

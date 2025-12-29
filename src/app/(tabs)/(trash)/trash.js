@@ -23,7 +23,7 @@ import apiService from '@/utils/request'
 import { useTheme } from '@/theme/useTheme'
 import { useFocusEffect } from 'expo-router'
 import * as SecureStore from 'expo-secure-store'
-import useCategoryStore from '@/stores/categories'
+import useCategoryStore from '@/stores/useCategoryStore'
 
 // Android 开启 LayoutAnimation
 if (
@@ -176,7 +176,7 @@ export default function TrashScreen() {
     ])
   }
 
-  // 全选/反选逻辑 (可选)
+  // 全选/反选逻辑
   const handleSelectAll = () => {
     if (selectedIds.size === data?.passwords?.length) {
       setSelectedIds(new Set()) // 全不选
@@ -206,8 +206,6 @@ export default function TrashScreen() {
     if (days > 3) return 'hourglass-end' // 少量
     return 'hourglass-o' // 几乎空了
   }
-
-  // --- 渲染组件 ---
 
   const renderHeader = () => {
     if (!data) return null
@@ -268,8 +266,8 @@ export default function TrashScreen() {
       // 启动组合动画
       Animated.parallel([
         Animated.timing(translateX, {
-          toValue: 500, // 向左滑出屏幕
-          duration: 500,
+          toValue: 500, // 向左滑出屏幕 500px
+          duration: 800,
           easing: Easing.bezier(0.25, 0.1, 0.25, 1),
           useNativeDriver: false,
         }),

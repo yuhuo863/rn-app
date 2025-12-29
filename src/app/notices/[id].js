@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'
+import { Text, View, StyleSheet, ScrollView } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import useFetchData from '@/hooks/useFetchData'
 import { useTheme } from '@/theme/useTheme'

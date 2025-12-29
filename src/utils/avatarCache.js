@@ -32,11 +32,9 @@ export const getCachedAvatarUri = async (userId, avatarUrl) => {
     if (result.status === 200) {
       return localUri
     } else {
-      console.warn('头像下载失败，status:', result.status)
       return avatarUrl // 下载失败 fallback 到网络 URL
     }
   } catch (error) {
-    console.error('头像缓存失败:', error)
     return avatarUrl // 出错也 fallback 到网络 URL
   }
 }
@@ -61,9 +59,8 @@ export const clearAvatarCache = async (userId) => {
 
     for (const file of userFiles) {
       await LegacyFileSystem.deleteAsync(`${AVATAR_CACHE_DIR}${file}`, { idempotent: true })
-      console.log('deleted')
     }
   } catch (error) {
-    console.error('清除头像缓存失败:', error)
+    throw error
   }
 }

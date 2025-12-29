@@ -40,84 +40,81 @@ export default function Index() {
     })
   }
 
-  if (loading) return <Loading />
-  if (error) return <NetworkError onReload={onReload} />
+  const renderContent = () => {
+    if (loading) return <Loading />
+    if (error) return <NetworkError onReload={onReload} />
+    return (
+      <ScrollView
+        contentContainerStyle={[styles.scrollContainer, { backgroundColor: theme.background }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 顶部背景装饰 */}
+        <View style={[styles.headerBanner, { backgroundColor: theme.headerBanner }]} />
 
-  return (
-    <ScrollView
-      contentContainerStyle={[styles.scrollContainer, { backgroundColor: theme.background }]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* 顶部背景装饰 */}
-      <View style={[styles.headerBanner, { backgroundColor: theme.headerBanner }]} />
-
-      {/* 用户基础信息卡片 */}
-      <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
-        <View style={[styles.avatarWrapper, { backgroundColor: theme.avatarBackground }]}>
-          {user?.avatar ? (
-            <Image
-              source={{ uri: user?.avatar }}
-              style={styles.avatar}
-              contentFit="cover"
-              transition={300}
-            />
-          ) : (
-            <View style={[styles.avatar, styles.placeholderAvatar]}>
-              <Ionicons name="person" size={50} color="#ccc" />
-            </View>
-          )}
-        </View>
-        <Text style={[styles.username, { color: theme.text }]}>{user?.username || '未设置'}</Text>
-        <Text style={[styles.userId, { color: theme.textSecondary }]} numberOfLines={1}>
-          ID: {user?.id || '---'}
-        </Text>
-      </View>
-
-      {/* 详细资料列表 */}
-      <View style={[styles.infoSection, { backgroundColor: theme.card }]}>
-        <View style={[styles.infoRow, { borderBottomColor: theme.border }]}>
-          <View style={styles.infoLabelSide}>
-            <Ionicons name="mail-outline" size={20} color={theme.iconColor} />
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>邮箱</Text>
+        {/* 用户基础信息卡片 */}
+        <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
+          <View style={[styles.avatarWrapper, { backgroundColor: theme.avatarBackground }]}>
+            {user?.avatar ? (
+              <Image
+                source={{ uri: user?.avatar }}
+                style={styles.avatar}
+                contentFit="cover"
+                transition={300}
+              />
+            ) : (
+              <View style={[styles.avatar, styles.placeholderAvatar]}>
+                <Ionicons name="person" size={50} color="#ccc" />
+              </View>
+            )}
           </View>
-          <Text style={[styles.infoValue, { color: theme.text }]}>{user?.email || '未设置'}</Text>
-        </View>
-        <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-          <View style={styles.infoLabelSide}>
-            <Ionicons name="transgender-outline" size={20} color={theme.iconColor} />
-            <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>性别</Text>
-          </View>
-          <Text style={[styles.infoValue, { color: theme.text }]}>
-            {user?.sex === 1 ? '男' : user?.sex === 0 ? '女' : '保密'}
+          <Text style={[styles.username, { color: theme.text }]}>{user?.username || '未设置'}</Text>
+          <Text style={[styles.userId, { color: theme.textSecondary }]} numberOfLines={1}>
+            ID: {user?.id || '---'}
           </Text>
         </View>
-      </View>
 
-      {/* 更新信息操作按钮 */}
-      <TouchableOpacity
-        style={[styles.updateButton, { backgroundColor: theme.buttonColor }]}
-        onPress={handleEditProfile}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="create-outline" size={20} color="#fff" />
-        <Text style={styles.updateButtonText}>更新个人信息</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* 详细资料列表 */}
+        <View style={[styles.infoSection, { backgroundColor: theme.card }]}>
+          <View style={[styles.infoRow, { borderBottomColor: theme.border }]}>
+            <View style={styles.infoLabelSide}>
+              <Ionicons name="mail-outline" size={20} color={theme.iconColor} />
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>邮箱</Text>
+            </View>
+            <Text style={[styles.infoValue, { color: theme.text }]}>{user?.email || '未设置'}</Text>
+          </View>
+          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.infoLabelSide}>
+              <Ionicons name="transgender-outline" size={20} color={theme.iconColor} />
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>性别</Text>
+            </View>
+            <Text style={[styles.infoValue, { color: theme.text }]}>
+              {user?.sex === 1 ? '男' : user?.sex === 0 ? '女' : '保密'}
+            </Text>
+          </View>
+        </View>
+
+        {/* 更新信息操作按钮 */}
+        <TouchableOpacity
+          style={[styles.updateButton, { backgroundColor: theme.buttonColor }]}
+          onPress={handleEditProfile}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="create-outline" size={20} color="#fff" />
+          <Text style={styles.updateButtonText}>更新个人信息</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    )
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>{renderContent()}</View>
   )
 }
 
-// 抽离的每一行信息组件
-const InfoRow = ({ icon, label, value }) => (
-  <View style={styles.infoRow}>
-    <View style={styles.infoLabelSide}>
-      <Ionicons name={icon} size={20} color="#e29447" />
-      <Text style={styles.infoLabel}>{label}</Text>
-    </View>
-    <Text style={styles.infoValue}>{value}</Text>
-  </View>
-)
-
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
     backgroundColor: '#F7F7F7',

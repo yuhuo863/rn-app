@@ -15,7 +15,6 @@ import { useEffect } from 'react'
 import { useNotifications } from '@/utils/context/NotificationContext'
 import { router } from 'expo-router'
 
-// 1. 时间格式化工具函数
 const formatTime = (dateString) => {
   const now = new Date()
   const date = new Date(dateString)

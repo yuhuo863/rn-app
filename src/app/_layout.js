@@ -10,6 +10,7 @@ import { useTheme } from '@/theme/useTheme'
 
 function RootLayoutContent() {
   const { theme } = useTheme()
+
   return (
     <SessionProvider>
       <NotificationProvider>

@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'expo-router'
 
 import { useSession } from '@/utils/ctx'
-import useCategoryStore from '@/stores/categories'
+import useCategoryStore from '@/stores/useCategoryStore'
 import Loading from '@/components/shared/Loading'
 
 export default function SignOut() {

@@ -29,7 +29,7 @@ export const calculateAppCacheSize = async () => {
         }
       } catch (e) {
         // 如果某个子目录读取失败，忽略，继续计算其他
-        console.warn('读取子目录失败，跳过:', dirUri, e)
+        return 0 // 直接返回，不影响上层计算
       }
       return total
     }
@@ -38,7 +38,6 @@ export const calculateAppCacheSize = async () => {
     const mb = bytes === 0 ? '0' : (bytes / (1024 * 1024)).toFixed(2)
     return `${mb} MB`
   } catch (error) {
-    console.error('计算缓存大小失败:', error)
     return '计算失败'
   }
 }
@@ -52,7 +51,6 @@ export const clearAppCache = async () => {
     // 重新创建空目录，防止后续操作因目录不存在报错
     await LegacyFileSystem.makeDirectoryAsync(APP_CACHE_DIR, { intermediates: true })
   } catch (error) {
-    console.error('清理缓存失败:', error)
     throw error // 抛出错误让调用方处理 Alert
   }
 }

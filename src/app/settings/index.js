@@ -29,7 +29,7 @@ export default function Index() {
       const size = await calculateAppCacheSize()
       setCacheSize(size)
     }
-    loadCacheSize()
+    void loadCacheSize()
   }, [])
 
   // 分享应用
@@ -38,9 +38,8 @@ export default function Index() {
     const message = Platform.OS === 'ios' ? 'KeyVault' : `KeyVault：\n${url}`
 
     await Share.share({
-      title: 'KeyVault',
-      message, // iOS、Android 都支持
-      url, // 只有 iOS 支持
+      message,
+      url,
     })
   }
 
@@ -121,7 +120,7 @@ export default function Index() {
             title="安全退出"
             titleTextColor="#ff9d9d"
             onPress={() => {
-              router.navigate('/auth/sign-out')
+              router.replace('/auth/sign-out')
             }}
           />
         </Section>

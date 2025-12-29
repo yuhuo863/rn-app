@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import apiService from '@/utils/request'
+import { Alert } from 'react-native'
 
 const useCategoryStore = create((set, get) => ({
   categories: [],
@@ -17,7 +18,7 @@ const useCategoryStore = create((set, get) => ({
       const data = await apiService.get('/category')
       set({ categories: data.categories || [] })
     } catch (error) {
-      console.error('Error fetching categories:', error)
+      Alert.alert('错误', '获取分类数据失败')
     } finally {
       set({ isLoading: false })
     }

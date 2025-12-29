@@ -1,9 +1,11 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Link } from 'expo-router'
+import { useTheme } from '@/theme/useTheme'
 
 export default function SignIn() {
+  const { theme } = useTheme()
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.card }]}>
       <View style={styles.button}>
         <Link href={{ pathname: '/auth' }} asChild>
           <TouchableOpacity>
@@ -12,7 +14,7 @@ export default function SignIn() {
         </Link>
       </View>
 
-      <Text style={styles.notice}>请先登录后再访问</Text>
+      <Text style={[styles.notice, { color: theme.text }]}>请先登录后再访问</Text>
     </View>
   )
 }

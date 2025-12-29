@@ -1,14 +1,16 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons'
+import { useTheme } from '@/theme/useTheme'
 
 export default function NetworkError(props) {
+  const { theme } = useTheme()
   const title =
     props.title ||
     '🤪唉呀妈呀，网坏了，咋回事呢？' ||
     "🤪Oops! Network error occurred. What's going on?"
   const { onReload } = props
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <SimpleLineIcons name={'drawer'} size={160} color={'#ddd'} />
       <Text style={styles.title}>{title}</Text>
 

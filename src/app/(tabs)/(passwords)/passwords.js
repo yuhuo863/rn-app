@@ -1,20 +1,16 @@
-import { StyleSheet, TouchableOpacity, Platform, Alert, AppState } from 'react-native'
+import { StyleSheet, TouchableOpacity, Platform } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSharedValue } from 'react-native-reanimated'
-import * as ScreenCapture from 'expo-screen-capture'
-import * as SecureStore from 'expo-secure-store'
 import { FontAwesome } from '@expo/vector-icons'
+import * as SecureStore from 'expo-secure-store'
 
 import apiService from '@/utils/request'
-import { authStatus } from '@/utils/auth'
-import { performBiometricAuth } from '@/utils/auth'
 import { useNotifications } from '@/utils/context/NotificationContext'
 
 import RecycleBin from '@/components/passwords/RecycleBin'
-import LockedOverlay from '@/components/passwords/LockedOverlay'
 import PasswordGrid from '@/components/passwords/PasswordGrid'
 import SearchAndFilterHeader from '@/components/passwords/SearchAndFilterHeader'
 import CategoryFilterModal from '@/components/passwords/CategoryFilterModal'
@@ -24,10 +20,14 @@ import NetworkError from '@/components/shared/NetworkError'
 
 import useFetchData from '@/hooks/useFetchData'
 import { useTheme } from '@/theme/useTheme'
-import useCategoryStore from '@/stores/categories'
+import useCategoryStore from '@/stores/useCategoryStore'
+import * as ScreenCapture from 'expo-screen-capture'
 
 export default function Index() {
+  const router = useRouter()
   const { theme } = useTheme()
+  const { filterId, filterName } = useLocalSearchParams()
+
   const { updateUnreadStatus } = useNotifications()
   const { data: checkRes } = useFetchData('/notice/check')
   useEffect(() => {
@@ -36,42 +36,9 @@ export default function Index() {
     }
   }, [checkRes])
 
-  const { refresh, filterId, filterName } = useLocalSearchParams()
-  const router = useRouter()
   const { data, loading, error, refreshing, onReload, onRefresh } = useFetchData('/password')
+  const { categories, isLoading, fetchCategories } = useCategoryStore()
 
-  const [isLocked, setIsLocked] = useState(!authStatus.isUnlocked) // 初始状态为锁定
-  const appState = useRef(AppState.currentState)
-  const triggerAuth = useCallback(async () => {
-    if (authStatus.isUnlocked) {
-      setIsLocked(false)
-      if (refresh) onReload()
-      return
-    }
-
-    try {
-      const success = await performBiometricAuth()
-      if (success) {
-        authStatus.isUnlocked = true
-        setIsLocked(false)
-        if (refresh) onReload()
-      } else {
-        console.log('识别被取消或失败')
-        setIsLocked(true)
-      }
-    } catch (e) {
-      Alert.alert('身份校验', '验证过程出错，请重试', [
-        { text: '点击重试', onPress: () => triggerAuth() },
-      ])
-    }
-  }, [refresh])
-
-  // 处理页面聚焦（首次进入或 Back 返回）
-  useFocusEffect(
-    useCallback(() => {
-      triggerAuth()
-    }, [triggerAuth]),
-  )
   useFocusEffect(
     useCallback(() => {
       async function checkReload() {
@@ -85,6 +52,7 @@ export default function Index() {
     }, []),
   )
 
+  // 初始化筛选条件
   useEffect(() => {
     if (filterId) {
       setActiveCategory(filterId)
@@ -93,55 +61,29 @@ export default function Index() {
     }
   }, [filterId])
 
-  const handleClearFilter = () => {
-    setActiveCategory(null)
-    router.setParams({ filterId: undefined, filterName: undefined })
-  }
+  // 初始化分类数据
+  useEffect(() => {
+    if (!isLoading) {
+      fetchCategories()
+    }
+  }, [])
 
-  // 监听 App 状态切换（切后台自动锁定）
+  // 阻止截图
   useEffect(() => {
     let isCaptureProtected = false
 
     const setupProtection = async () => {
-      // 1. 检查 API 在当前环境下是否可用
-      const isAvailable = await ScreenCapture.isAvailableAsync()
-      if (isAvailable) {
-        // 2. 启用安全屏障，禁止截图和多任务预览(支持 iOS 和 Android)
+      if (await ScreenCapture.isAvailableAsync()) {
         await ScreenCapture.preventScreenCaptureAsync()
         isCaptureProtected = true
       }
     }
-
     setupProtection()
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      // 离开前台（进入多任务界面或锁屏）
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        authStatus.isUnlocked = false
-        setIsLocked(true)
-      }
-
-      // 从后台/非活跃状态切回前台
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        setIsLocked(true)
-        triggerAuth() // 自动触发身份验证
-      }
-
-      appState.current = nextAppState
-    })
 
     return () => {
-      subscription.remove()
-      // 离开页面时, 如果之前开启了保护，则恢复允许截图
       if (isCaptureProtected) {
         ScreenCapture.allowScreenCaptureAsync()
       }
-    }
-  }, [triggerAuth])
-
-  const { categories, isLoading, fetchCategories } = useCategoryStore()
-  useEffect(() => {
-    if (!isLoading) {
-      fetchCategories()
     }
   }, [])
 
@@ -189,6 +131,10 @@ export default function Index() {
   // 添加密码模态框是否可见
   const [modalVisible, setModalVisible] = useState(false)
 
+  const handleClearFilter = () => {
+    setActiveCategory(null)
+    router.setParams({ filterId: undefined, filterName: undefined })
+  }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -234,9 +180,6 @@ export default function Index() {
           >
             <FontAwesome name="plus" size={24} color={theme.primary} />
           </TouchableOpacity>
-
-          {/* 锁定遮罩 */}
-          <LockedOverlay isLocked={isLocked} onUnlock={triggerAuth} />
 
           {/* 模态框：添加密码 */}
           <PasswordFormModal

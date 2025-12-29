@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Text,
   StyleSheet,
@@ -24,7 +24,7 @@ import { showConfirm } from '@/components/shared/CustomConfirm'
 import Toast from 'react-native-root-toast'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '@/theme/useTheme'
-import useCategoryStore from '@/stores/categories'
+import useCategoryStore from '@/stores/useCategoryStore'
 import { ICON_OPTIONS, COLOR_OPTIONS } from '@/constants/categoryConfig'
 import * as SecureStore from 'expo-secure-store'
 
@@ -119,7 +119,6 @@ export default function Categories() {
 
       setEditingCategory({ name: '', icon: 'folder', color: '#3b82f6' })
     } catch (error) {
-      console.error('error=>', error)
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
       Alert.alert('错误', '分类操作失败，请稍后再试')
     } finally {
@@ -293,7 +292,6 @@ export default function Categories() {
       visible={actionVisible}
       transparent
       animationType="slide"
-      onDismiss={() => console.log('iOS: 模态框消失')}
       onRequestClose={dismissActionSheet}
     >
       <Pressable style={styles.modalOverlay2} onPress={dismissActionSheet}>

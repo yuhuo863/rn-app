@@ -1,6 +1,6 @@
 export const lightColors = {
   // --- 基础层级 ---
-  background: '#f8fafc', // slate-50，温暖舒适的白灰（浅色模式优秀）
+  background: '#f1f5f9', // slate-50，温暖舒适的白灰（浅色模式优秀）
   card: '#ffffff',
   surface: '#ffffff',
   noticeBackground: '#ffffff',
@@ -19,7 +19,7 @@ export const lightColors = {
   success: '#22c55e',
 
   // --- UI 组件 ---
-  headerBackground: 'rgba(255, 255, 255, 0.85)', // 保留磨砂，优雅
+  headerBackground: '#e2e8f0', // 保留磨砂，优雅
   headerTint: '#0f172a',
   headerBanner: '#e0e7ff',
 

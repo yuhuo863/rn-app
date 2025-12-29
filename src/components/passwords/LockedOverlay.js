@@ -1,11 +1,11 @@
-import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons, FontAwesome } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
 import { useTheme } from '@/theme/useTheme'
 
 export default function LockedOverlay({ isLocked, onUnlock }) {
   const { theme } = useTheme()
+
   if (!isLocked) return null
 
   const content = (
@@ -18,7 +18,8 @@ export default function LockedOverlay({ isLocked, onUnlock }) {
         为了您的账户安全，请验证身份
       </Text>
       <TouchableOpacity style={[styles.button, { backgroundColor: theme.card }]} onPress={onUnlock}>
-        <Text style={[styles.buttonText, { color: theme.text }]}>点击验证解锁</Text>
+        <Text style={[styles.buttonText, { color: theme.text }]}>验证解锁</Text>
+        <FontAwesome name="hand-pointer-o" size={16} color="#fff" />
       </TouchableOpacity>
     </View>
   )
@@ -62,6 +63,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 })

@@ -18,7 +18,7 @@ import apiService from '@/utils/request'
 import Loading from '@/components/shared/Loading'
 
 import { useTheme } from '@/theme/useTheme'
-import useCategoryStore from '@/stores/categories'
+import useCategoryStore from '@/stores/useCategoryStore'
 
 export default function PasswordFormModal({
   visible,

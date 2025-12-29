@@ -1,8 +1,5 @@
-import { useState } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { WebView } from 'react-native-webview'
-
-import Loading from '@/components/shared/Loading'
 
 /**
  * 带加载中和进度条的 WebView

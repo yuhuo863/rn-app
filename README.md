@@ -20,3 +20,5 @@ TODO:分类图标颜色：统一配色|调色板自定义配色
 
 ### 恢复滑出页面动画：
 - 点击单独恢复按钮(请求后端接口)后，恢复的密码项向右/向左滑出页面
+
+eas build --platform android --profile preview

@@ -22,6 +22,7 @@ export default function ProfileEdit() {
   const { theme } = useTheme()
   const router = useRouter()
   const initialData = useLocalSearchParams()
+
   // 表单状态
   const [username, setUsername] = useState(initialData.username || '')
   const [email, setEmail] = useState(initialData.email || '')
@@ -34,26 +35,30 @@ export default function ProfileEdit() {
 
   // 1. 选择图片逻辑
   const pickImage = async () => {
-    // 请求权限
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    try {
+      // 请求权限
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
 
-    if (permissionResult.granted === false) {
-      Alert.alert('需要权限', '请允许访问相册以修改头像')
-      return
-    }
+      if (permissionResult.granted === false) {
+        Alert.alert('需要权限', '请允许访问相册以修改头像')
+        return
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      // 在 Android 或 Web 上，作为媒体类型传递的 livePhotos 类型将被忽略。
-      // livePhotos 仅限 IOS
-      mediaTypes: ['images', 'livePhotos'],
-      allowsEditing: true,
-      aspect: [1, 1], // 限制为正方形
-      quality: 0.8, // 压缩质量
-    })
+      const result = await ImagePicker.launchImageLibraryAsync({
+        // 在 Android 或 Web 上，作为媒体类型传递的 livePhotos 类型将被忽略。
+        // livePhotos 仅限 IOS
+        mediaTypes: ['images', 'livePhotos'],
+        allowsEditing: true,
+        aspect: [1, 1], // 限制为正方形
+        quality: 0.8, // 压缩质量
+      })
 
-    if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri) // 预览本地图片
-      setIsNewAvatar(true) // 标记需要上传
+      if (!result.canceled) {
+        setAvatarUri(result.assets[0].uri) // 预览本地图片
+        setIsNewAvatar(true) // 标记需要上传
+      }
+    } catch (error) {
+      Alert.alert('错误', '图片选择失败')
     }
   }
 

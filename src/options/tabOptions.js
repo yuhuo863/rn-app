@@ -4,6 +4,7 @@ import { SimpleLineIcons } from '@expo/vector-icons'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useTheme } from '@/theme/useTheme'
 import { useNotifications } from '@/utils/context/NotificationContext'
+import { useSession } from '@/utils/ctx'
 
 /**
  * 导航栏 Logo 组件
@@ -41,14 +42,15 @@ function HeaderButton(props) {
 }
 
 export default function tabOptions() {
+  const { session } = useSession()
   return {
     headerTitleAlign: 'center', // 安卓标题栏居中
     // headerTitle: (props) => <LogoTitle {...props} />,
-    headerLeft: () => <HeaderButton name="bell" href="/notices" style={styles.headerButton} />,
+    headerLeft: () => (
+      <>{session && <HeaderButton name="bell" href="/notices" style={styles.headerButton} />}</>
+    ),
     headerRight: () => (
-      <>
-        <HeaderButton name="options" href="/settings" style={styles.headerButton} />
-      </>
+      <>{session && <HeaderButton name="options" href="/settings" style={styles.headerButton} />}</>
     ),
   }
 }

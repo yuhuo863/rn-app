@@ -21,7 +21,7 @@ import Toast from 'react-native-root-toast'
 import PasswordFormModal from '@/components/passwords/PasswordFormModal'
 import { useTheme } from '@/theme/useTheme'
 import * as SecureStore from 'expo-secure-store'
-import useCategoryStore from '@/stores/categories'
+import useCategoryStore from '@/stores/useCategoryStore'
 
 export default function Password() {
   const { theme } = useTheme()
@@ -41,12 +41,11 @@ export default function Password() {
     try {
       await apiService.delete(`/password/${id}`)
       await fetchCategories() // 用于刷新分类列表对应分类的passwordsCount
-
+      await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
       setDeleting(false)
       setDeleteModalVisible(false)
       router.push({
         pathname: '/passwords',
-        params: { refresh: Date.now() },
       })
     } catch (err) {
       Alert.alert('错误', '删除失败，请稍后重试')
@@ -108,9 +107,6 @@ export default function Password() {
           paddingHorizontal: 20,
         },
       })
-      // 3. (可选) 加入触感反馈
-      // import * as Haptics from 'expo-haptics';
-      // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch (err) {
       Alert.alert('错误', '复制失败，请重试')
     }

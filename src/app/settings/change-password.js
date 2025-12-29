@@ -51,7 +51,7 @@ export default function ChangePassword() {
     try {
       await apiService.post('/user/change-password', { currentPassword, newPassword })
 
-      router.navigate('/auth/sign-out')
+      router.replace('/auth/sign-out')
       Alert.alert('成功', '密码已成功修改，请重新登录')
     } catch (error) {
       Alert.alert('失败', error?.data?.errors[0] || '当前密码错误或系统繁忙')

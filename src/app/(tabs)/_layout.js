@@ -3,9 +3,6 @@ import { Tabs } from 'expo-router'
 import { Platform } from 'react-native'
 import { SimpleLineIcons } from '@expo/vector-icons'
 import { useTheme } from '@/theme/useTheme'
-import useFetchData from '@/hooks/useFetchData'
-import { useNotifications } from '@/utils/context/NotificationContext'
-import { useEffect } from 'react'
 
 /**
  * TabBar 图标组件
@@ -17,7 +14,6 @@ function TabBarIcon(props) {
 
 export default function TabLayout() {
   const { theme } = useTheme()
-
   // iOS 使用原生液态玻璃 Tabs
   if (Platform.OS === 'ios') {
     return (

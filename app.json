@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "yuhuo-app",
+    "name": "KeyVault",
     "slug": "yuhuo-app",
     "scheme": "yuhuo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/icon.png",
+    "icon": "./src/assets/test.png",
     "userInterfaceStyle": "automatic",
     "updates": {
       "enabled": true,
@@ -17,7 +17,7 @@
     },
     "newArchEnabled": true,
     "splash": {
-      "image": "./src/assets/splash-icon.png",
+      "image": "./src/assets/test.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -29,21 +29,41 @@
       }
     },
     "android": {
+      "package": "com.yuhuo863.keyvault",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "yuhuo.app"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/test.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.yuhuo863.keyvault"
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./src/assets/favicon.png"
     },
-    "plugins": ["expo-secure-store", "expo-router", "expo-font"],
+    "plugins": [
+      "expo-secure-store",
+      "expo-router",
+      "expo-font"
+    ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "84e62ae3-7a51-4217-bee8-48ae9fe9c131"
+        "projectId": "e843e1cc-a7bf-449a-b29b-5ad394d8d1e9"
       }
     },
     "owner": "yuhuo"
