@@ -13,6 +13,8 @@ import * as Haptics from 'expo-haptics'
 import { useRouter } from 'expo-router'
 
 import { useTheme } from '@/theme/useTheme'
+import { decryptField } from '@/utils/crypto'
+import useAuthStore from '@/stores/useAuthStore'
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window')
 const TRIGGER_THRESHOLD = 180 // 触发状态改变的阈值高度
@@ -41,6 +43,13 @@ export default function DraggablePasswordCard({
   const scale = useSharedValue(1)
   const opacity = useSharedValue(1)
   const isPressed = useSharedValue(false)
+
+  // 解密
+  const { masterKey } = useAuthStore.getState()
+  const decryptedContent = {
+    title: decryptField(item.title, masterKey),
+    username: decryptField(item.username, masterKey),
+  }
 
   const pan = Gesture.Pan()
     .minPointers(1) // 至少需要一个手指拖拽
@@ -141,7 +150,7 @@ export default function DraggablePasswordCard({
 
             <View style={styles.titleSection}>
               <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-                {item.title}
+                {decryptedContent.title || '未命名'}
               </Text>
             </View>
 
@@ -151,7 +160,7 @@ export default function DraggablePasswordCard({
               <View style={styles.infoRow}>
                 <FontAwesome name="user" size={12} color="#94a3b8" style={styles.infoIcon} />
                 <Text style={[styles.infoText, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {item.username || '未设置'}
+                  {decryptedContent.username || '未设置'}
                 </Text>
               </View>
               <View style={styles.infoRow}>

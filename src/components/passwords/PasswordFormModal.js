@@ -17,8 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import apiService from '@/utils/request'
 import Loading from '@/components/shared/Loading'
 
-import { useTheme } from '@/theme/useTheme'
 import useCategoryStore from '@/stores/useCategoryStore'
+import useAuthStore from '@/stores/useAuthStore'
+import { useTheme } from '@/theme/useTheme'
+import { encryptField } from '@/utils/crypto'
 
 export default function PasswordFormModal({
   visible,
@@ -34,7 +36,7 @@ export default function PasswordFormModal({
   const [formParams, setFormParams] = useState({
     title: '',
     username: '',
-    encrypted_password: '',
+    password: '',
     site_url: undefined,
     notes: undefined,
     categoryId: undefined,
@@ -43,10 +45,12 @@ export default function PasswordFormModal({
   useEffect(() => {
     if (visible) {
       if (mode === 'edit' && initialData) {
+        // 假设进入编辑模式时，父组件已经把密文解密成了明文传进来
+        // 如果 initialData 还是密文，这里需要先解密再 setFormParams
         setFormParams({
           title: initialData.title || '',
           username: initialData.username || '',
-          encrypted_password: initialData.password || '',
+          password: initialData.password || '',
           site_url: initialData.site_url || undefined,
           notes: initialData.notes || undefined,
           categoryId: initialData.categoryId || initialData.category?.id || undefined,
@@ -55,7 +59,7 @@ export default function PasswordFormModal({
         setFormParams({
           title: '',
           username: '',
-          encrypted_password: '',
+          password: '',
           site_url: undefined,
           notes: undefined,
           categoryId: undefined,
@@ -65,18 +69,38 @@ export default function PasswordFormModal({
   }, [visible, mode, initialData])
 
   const onChangeText = (text, name) => {
-    setFormParams((prev) => ({ ...prev, [name]: text === '' ? undefined : text })) // 可选字段为空时传 undefined
+    // 可选字段为空时需要传 undefined
+    setFormParams((prev) => ({ ...prev, [name]: text === '' ? undefined : text }))
   }
 
   const handleSubmit = async () => {
     if (!formParams.title.trim()) return Alert.alert('提示', '请输入标题')
+    const { masterKey } = useAuthStore.getState()
+    if (!masterKey) return Alert.alert('错误', '加密密钥丢失，请重新登录')
 
     setLoadingSubmit(true)
     try {
+      // 1. 准备加密 Payload
+      // 我们保留 categoryId 为明文，其他字段全部在客户端加密
+      const encryptedPayload = {
+        categoryId: formParams.categoryId || undefined, // 分类ID不加密，便于后端索引
+
+        // 使用 masterKey 对每个字段独立加密
+        // encryptField 返回格式通常为 "IV字符串|密文字符串" 或 Base64
+        title: encryptField(formParams.title, masterKey),
+        username: encryptField(formParams.username, masterKey),
+        password: encryptField(formParams.password, masterKey),
+
+        // 可选字段，有值才加密
+        site_url: formParams.site_url ? encryptField(formParams.site_url, masterKey) : undefined,
+        notes: formParams.notes ? encryptField(formParams.notes, masterKey) : undefined,
+      }
+      // 2. 发送密文到后端
+      // 后端只负责存这些乱码字符串，完全不知道内容
       if (mode === 'edit') {
-        await apiService.put(`/password/${initialData.id}`, formParams)
+        await apiService.put(`/password/${initialData.id}`, encryptedPayload)
       } else {
-        await apiService.post('/password', formParams)
+        await apiService.post('/password', encryptedPayload)
       }
 
       await fetchCategories() // 更新分类列表
@@ -228,8 +252,8 @@ export default function PasswordFormModal({
                 placeholder="密码"
                 placeholderTextColor={theme.textSecondary}
                 secureTextEntry
-                value={formParams.encrypted_password}
-                onChangeText={(t) => onChangeText(t, 'encrypted_password')}
+                value={formParams.password}
+                onChangeText={(t) => onChangeText(t, 'password')}
               />
             </View>
 

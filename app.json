@@ -4,6 +4,7 @@
     "slug": "yuhuo-app",
     "scheme": "yuhuo",
     "version": "1.0.0",
+
     "orientation": "portrait",
     "icon": "./src/assets/test.png",
     "userInterfaceStyle": "automatic",
@@ -40,10 +41,7 @@
               "host": "yuhuo.app"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
       "adaptiveIcon": {
@@ -55,11 +53,7 @@
     "web": {
       "favicon": "./src/assets/favicon.png"
     },
-    "plugins": [
-      "expo-secure-store",
-      "expo-router",
-      "expo-font"
-    ],
+    "plugins": ["expo-secure-store", "expo-router", "expo-font"],
     "extra": {
       "router": {},
       "eas": {

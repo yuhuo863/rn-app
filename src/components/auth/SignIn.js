@@ -51,7 +51,7 @@ export default function SignIn(props) {
         bottomOffset={200} // 键盘弹出时，距离底部的偏移量
         contentContainerStyle={styles.contentContainer}
       >
-        {loading && <Loading />}
+        {loading && <Loading message={'正在构建安全环境...'} />}
 
         <View style={styles.content}>
           <Link href="../" asChild>
