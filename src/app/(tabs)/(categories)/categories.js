@@ -26,7 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { useTheme } from '@/theme/useTheme'
 import useCategoryStore from '@/stores/useCategoryStore'
 import { ICON_OPTIONS, COLOR_OPTIONS } from '@/constants/categoryConfig'
-import * as SecureStore from 'expo-secure-store'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 const { width } = Dimensions.get('window')
 
@@ -108,9 +108,8 @@ export default function Categories() {
       })
 
       if (isEdit) {
-        // 标记回收站页面需要刷新
-        await SecureStore.setItemAsync('recycleBinNeedsRefresh', 'true')
         updateCategory(resultData.category)
+        useNotifyStore.getState().notifyTrashUpdated()
       } else {
         addCategory(resultData.newCategory)
       }

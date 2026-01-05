@@ -3,8 +3,8 @@ import { Image } from 'expo-image'
 import { SimpleLineIcons } from '@expo/vector-icons'
 import { StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useTheme } from '@/theme/useTheme'
-import { useNotifications } from '@/utils/context/NotificationContext'
 import { useSession } from '@/utils/ctx'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 /**
  * 导航栏 Logo 组件
@@ -20,7 +20,7 @@ function LogoTitle() {
 function HeaderButton(props) {
   const { name, ...rest } = props
   const { theme } = useTheme()
-  const { hasUnread } = useNotifications()
+  const hasUnread = useNotifyStore((state) => state.hasUnread)
 
   return (
     <Link asChild {...rest}>

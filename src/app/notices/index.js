@@ -12,8 +12,8 @@ import { useTheme } from '@/theme/useTheme'
 import useFetchData from '@/hooks/useFetchData'
 import NetworkError from '@/components/shared/NetworkError'
 import { useEffect } from 'react'
-import { useNotifications } from '@/utils/context/NotificationContext'
 import { router } from 'expo-router'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 const formatTime = (dateString) => {
   const now = new Date()
@@ -64,9 +64,8 @@ export default function NotificationList() {
     error,
     onReload,
   } = useFetchData('/notice')
-  const { clearUnread } = useNotifications()
   useEffect(() => {
-    clearUnread()
+    useNotifyStore.getState().clearUnread()
   }, [])
 
   const renderItem = ({ item }) => {
@@ -159,14 +158,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  content: { flex: 1, paddingTop: 2 }, // 微调文字垂直位置与图标对齐
+  content: { flex: 1 },
   cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center', // 确保标题和时间水平对齐
+    justifyContent: 'space-around',
+    alignItems: 'center',
     marginBottom: 6,
   },
-  itemTitle: { fontSize: 16, fontWeight: '700', width: '80%' },
+  itemTitle: { fontSize: 16, fontWeight: '700', width: '72%' },
   timeText: { fontSize: 12 },
-  itemContent: { fontSize: 14, lineHeight: 20 },
+  itemContent: { fontSize: 14 },
 })

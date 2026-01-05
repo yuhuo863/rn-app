@@ -21,9 +21,8 @@ import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 import apiService from '@/utils/request'
 import { useTheme } from '@/theme/useTheme'
-import { useFocusEffect } from 'expo-router'
-import * as SecureStore from 'expo-secure-store'
 import useCategoryStore from '@/stores/useCategoryStore'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 // Android 开启 LayoutAnimation
 if (
@@ -49,6 +48,7 @@ const COLORS = {
 export default function TrashScreen() {
   const { theme } = useTheme()
 
+  const trashVersion = useNotifyStore((state) => state.trashVersion)
   const { data, loading, error, refreshing, onRefresh, onReload } = useFetchData('/password/trash')
   const { fetchCategories } = useCategoryStore()
 
@@ -71,20 +71,13 @@ export default function TrashScreen() {
     setSelectedIds(new Set())
   }
 
-  useFocusEffect(
-    useCallback(() => {
-      async function checkReload() {
-        const shouldReload = await SecureStore.getItemAsync('recycleBinNeedsRefresh')
-        if (shouldReload) {
-          await onReload({ silent: true })
-          await SecureStore.deleteItemAsync('recycleBinNeedsRefresh')
-          // 重置本地已删除 ID 集合
-          setLocalDeletedIds(new Set())
-        }
-      }
-      void checkReload()
-    }, []),
-  )
+  useEffect(() => {
+    if (trashVersion) {
+      onReload()
+      // 清除本地记录
+      setLocalDeletedIds(new Set())
+    }
+  }, [trashVersion])
 
   useEffect(() => {
     const onBackPress = () => {
@@ -165,7 +158,7 @@ export default function TrashScreen() {
             } else {
               await apiService.post('/password/restore', { id: idsArray })
               await fetchCategories()
-              await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
+              useNotifyStore.getState().notifyPasswordUpdated()
             }
           } catch (e) {
             await onReload()
@@ -387,8 +380,7 @@ export default function TrashScreen() {
       await apiService.post('/password/restore', { id: item.id })
       await onReload({ silent: true })
       await fetchCategories()
-      // 标记密码列表需要刷新
-      await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
+      useNotifyStore.getState().notifyPasswordUpdated()
     } catch (e) {
       // 如果失败了，把 ID 拿回来
       setLocalDeletedIds((prev) => {

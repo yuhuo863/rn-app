@@ -14,20 +14,23 @@ import useFetchData from '@/hooks/useFetchData'
 import NetworkError from '@/components/shared/NetworkError'
 import Loading from '@/components/shared/Loading'
 import apiService from '@/utils/request'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as Clipboard from 'expo-clipboard'
 import Toast from 'react-native-root-toast'
 import PasswordFormModal from '@/components/passwords/PasswordFormModal'
 import { useTheme } from '@/theme/useTheme'
-import * as SecureStore from 'expo-secure-store'
 import useCategoryStore from '@/stores/useCategoryStore'
+import useAuthStore from '@/stores/useAuthStore'
+import { decryptField } from '@/utils/crypto'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 export default function Password() {
   const { theme } = useTheme()
 
   const { id } = useLocalSearchParams()
   const router = useRouter()
+  const { masterKey } = useAuthStore.getState()
   const { data, loading, error, onReload } = useFetchData(`/password/${id}`)
   const [deleting, setDeleting] = useState(false)
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
@@ -35,13 +38,67 @@ export default function Password() {
   const [editVisible, setEditVisible] = useState(false)
   const { categories, fetchCategories } = useCategoryStore()
 
+  const [decryptedData, setDecryptedData] = useState(null)
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    const decryptAllFields = async () => {
+      // 只有当 API 数据返回且 masterKey 存在时才执行
+      if (data?.password && masterKey) {
+        try {
+          const item = data.password
+
+          // 并行解密所有字段
+          const [title, username, password, notes, site_url] = await Promise.all([
+            decryptField(item.title, masterKey),
+            decryptField(item.username, masterKey),
+            decryptField(item.password, masterKey),
+            item.notes ? decryptField(item.notes, masterKey) : Promise.resolve(''),
+            item.site_url ? decryptField(item.site_url, masterKey) : Promise.resolve(''),
+          ])
+
+          setDecryptedData({
+            ...item, // 保留原有的 id, category 等非加密信息
+            title,
+            username,
+            password,
+            notes,
+            site_url,
+          })
+        } catch (err) {
+          console.error('详情页解密失败:', err)
+          Alert.alert('错误', '数据解密失败，请检查主密钥是否正确')
+        }
+      }
+    }
+
+    decryptAllFields()
+  }, [data, masterKey])
+
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+
+    if (isPasswordVisible) {
+      timerRef.current = setTimeout(() => {
+        setIsPasswordVisible(false)
+      }, 30000)
+    }
+    // 组件卸载时清除定时器，防止内存泄漏
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [isPasswordVisible])
   const handleDelete = async () => {
     setDeleteModalVisible(false)
     setDeleting(true)
     try {
       await apiService.delete(`/password/${id}`)
       await fetchCategories() // 用于刷新分类列表对应分类的passwordsCount
-      await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
+      useNotifyStore.getState().notifyPasswordUpdated()
       setDeleting(false)
       setDeleteModalVisible(false)
       router.push({
@@ -113,10 +170,10 @@ export default function Password() {
   }
 
   const renderContent = () => {
-    if (loading) return <Loading />
+    if (loading || !decryptedData) return <Loading />
     if (error) return <NetworkError onReload={onReload} />
 
-    const item = data.password
+    const item = decryptedData || data?.password
 
     return (
       <View style={{ flex: 1 }}>
@@ -202,9 +259,22 @@ export default function Password() {
                   <Text style={[styles.labelText, { color: theme.text }]}>密码</Text>
                 </View>
                 <View style={styles.valueBox}>
-                  <Text style={[styles.passwordText, { color: theme.textSecondary }]} selectable>
-                    {item.password}
+                  <Text
+                    style={[styles.passwordText, { color: theme.textSecondary }]}
+                    selectable={isPasswordVisible}
+                  >
+                    {isPasswordVisible ? item.password : '••••••••'}
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                    style={styles.copyBtn}
+                  >
+                    <Ionicons
+                      name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color="#64748b"
+                    />
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -280,12 +350,12 @@ export default function Password() {
         <PasswordFormModal
           visible={editVisible}
           mode="edit"
-          initialData={data.password}
+          initialData={decryptedData}
           categoryMap={{ categories }}
           onClose={() => setEditVisible(false)}
           onSuccess={async () => {
             await onReload()
-            await SecureStore.setItemAsync('passwordListNeedsRefresh', 'true')
+            useNotifyStore.getState().notifyPasswordUpdated()
           }}
         />
       </View>

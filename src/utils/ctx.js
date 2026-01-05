@@ -4,7 +4,7 @@ import { Alert } from 'react-native'
 
 import { useStorageState } from '@/hooks/useStorageState'
 import apiService from '@/utils/request'
-import { deriveMasterKey } from '@/utils/crypto'
+import { deriveMasterKey, saveSecureData } from '@/utils/crypto'
 import useAuthStore from '@/stores/useAuthStore'
 
 const AuthContext = createContext({
@@ -59,12 +59,20 @@ export function SessionProvider({ children }) {
           try {
             // 1. 调用后端登录接口 (发送明文密码进行 bcrypt 校验)
             const data = await apiService.post('/auth/login', formParams)
+            const { token, user, system_pepper } = data
             // 2. 登录成功后，立即在本地利用原始密码派生主密钥
-            // 使用 login(username/email) 作为盐值，确保密钥的唯一性和确定性
-            const mKey = deriveMasterKey(formParams.password, formParams.login)
-            // 3. 将派生出的密钥存入内存 Store，供后续加解密使用
+            // 使用 userId 作为盐值，确保密钥的唯一性和确定性
+            const mKey = deriveMasterKey(formParams.password, user.id, system_pepper)
+            // 3. 生成功后，静默存入安全隔层
+            await saveSecureData(mKey, system_pepper)
+            // 4. 将派生出的密钥存入内存 Store，供后续加解密使用
             useAuthStore.getState().setMasterKey(mKey)
-            await setSession(data.token)
+            // 5. 同时更新内存中的系统pepper信息
+            useAuthStore.getState().setSystemPepper(system_pepper)
+            // 6. 同时更新内存中的用户信息
+            useAuthStore.getState().setUser(user)
+            // 7. 将 token 存入本地存储，用于后续请求携带
+            await setSession(token)
             setLoading(false)
             router.navigate('/passwords')
           } catch (err) {
@@ -83,7 +91,6 @@ export function SessionProvider({ children }) {
         },
         signOut: async () => {
           await setSession(null)
-          useAuthStore.getState().reset() // 退出时务必清空内存密钥
         },
         destroyAccount: async () => {
           await apiService.delete('/user/me')

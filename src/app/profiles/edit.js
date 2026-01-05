@@ -15,8 +15,8 @@ import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import apiService from '@/utils/request'
-import * as SecureStore from 'expo-secure-store'
 import { useTheme } from '@/theme/useTheme'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 export default function ProfileEdit() {
   const { theme } = useTheme()
@@ -115,8 +115,7 @@ export default function ProfileEdit() {
 
       setIsNewAvatar(false)
 
-      // 标记通知个人主页数据重载
-      await SecureStore.setItemAsync('profileNeedsReload', 'true')
+      useNotifyStore.getState().notifyProfileUpdated()
 
       Alert.alert('成功', '资料已更新', [{ text: '确定', onPress: () => router.back() }])
     } catch (error) {

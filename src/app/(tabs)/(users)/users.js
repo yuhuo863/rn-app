@@ -1,31 +1,26 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
 import useFetchData from '@/hooks/useFetchData'
 import { Image } from 'expo-image'
-import { useCallback } from 'react'
+import { useEffect } from 'react'
 import Loading from '@/components/shared/Loading'
 import NetworkError from '@/components/shared/NetworkError'
 import { Ionicons } from '@expo/vector-icons'
-import { useFocusEffect, useRouter } from 'expo-router'
-import * as SecureStore from 'expo-secure-store'
+import { useRouter } from 'expo-router'
 import { useTheme } from '@/theme/useTheme'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 export default function Index() {
   const { theme } = useTheme()
   const router = useRouter()
+  // 1. 从 Store 获取 profileVersion
+  const profileVersion = useNotifyStore((state) => state.profileVersion)
   const { data: user, error, loading, onReload } = useFetchData('user/me')
 
-  useFocusEffect(
-    useCallback(() => {
-      async function checkReload() {
-        const shouldReload = await SecureStore.getItemAsync('profileNeedsReload')
-        if (shouldReload) {
-          await onReload()
-          await SecureStore.deleteItemAsync('profileNeedsReload')
-        }
-      }
-      void checkReload()
-    }, []),
-  )
+  useEffect(() => {
+    if (profileVersion > 0) {
+      onReload()
+    }
+  }, [profileVersion])
 
   // 处理点击更新信息按钮
   const handleEditProfile = () => {
@@ -57,6 +52,7 @@ export default function Index() {
             {user?.avatar ? (
               <Image
                 source={{ uri: user?.avatar }}
+                cachePolicy="memory-disk" // 缓存策略: 优先查内存，再查磁盘，最后才下载
                 style={styles.avatar}
                 contentFit="cover"
                 transition={300}

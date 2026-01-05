@@ -1,5 +1,5 @@
-import React from 'react'
-import { TouchableOpacity, View, Text, StyleSheet, Platform, Dimensions } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { TouchableOpacity, View, Text, StyleSheet, Platform, Dimensions, Alert } from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
   useSharedValue,
@@ -44,12 +44,47 @@ export default function DraggablePasswordCard({
   const opacity = useSharedValue(1)
   const isPressed = useSharedValue(false)
 
-  // 解密
-  const { masterKey } = useAuthStore.getState()
-  const decryptedContent = {
-    title: decryptField(item.title, masterKey),
-    username: decryptField(item.username, masterKey),
-  }
+  const [displayData, setDisplayData] = useState({
+    title: '需解锁以查看',
+    username: '需解锁以查看',
+  })
+  // 明确订阅 masterKey 变更以触发重新解密
+  const masterKey = useAuthStore((state) => state.masterKey)
+  useEffect(() => {
+    let isMounted = true // 防止组件卸载后设置状态
+
+    const performDecryption = async () => {
+      // 如果 masterKey 还没到位，保持加载状态并退出
+      if (!masterKey) {
+        return
+      }
+
+      try {
+        const [decryptedTitle, decryptedUser] = await Promise.all([
+          decryptField(item.title, masterKey),
+          decryptField(item.username, masterKey),
+        ])
+
+        if (isMounted) {
+          setDisplayData({
+            title: decryptedTitle || '未命名',
+            username: decryptedUser || '未设置',
+          })
+        }
+      } catch (error) {
+        console.error('解密失败:', error)
+        if (isMounted) {
+          setDisplayData({ title: '解密失败', username: '解密失败' })
+        }
+      }
+    }
+
+    performDecryption()
+
+    return () => {
+      isMounted = false
+    }
+  }, [masterKey, item.title, item.username])
 
   const pan = Gesture.Pan()
     .minPointers(1) // 至少需要一个手指拖拽
@@ -150,7 +185,7 @@ export default function DraggablePasswordCard({
 
             <View style={styles.titleSection}>
               <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-                {decryptedContent.title || '未命名'}
+                {displayData.title}
               </Text>
             </View>
 
@@ -160,7 +195,7 @@ export default function DraggablePasswordCard({
               <View style={styles.infoRow}>
                 <FontAwesome name="user" size={12} color="#94a3b8" style={styles.infoIcon} />
                 <Text style={[styles.infoText, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {decryptedContent.username || '未设置'}
+                  {displayData.username}
                 </Text>
               </View>
               <View style={styles.infoRow}>

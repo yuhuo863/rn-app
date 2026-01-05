@@ -6,21 +6,26 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native'
 import { useState } from 'react'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '@/theme/useTheme'
 import apiService from '@/utils/request'
+import useAuthStore from '@/stores/useAuthStore'
+import { resetMasterKeyAndReEncrypt } from '@/utils/crypto'
 
 export default function ChangePassword() {
   const router = useRouter()
   const { theme } = useTheme()
+
+  const [loading, setLoading] = useState(false)
+  const [secureEntry, setSecureEntry] = useState(true)
   const [currentPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [secureEntry, setSecureEntry] = useState(true) // 切换明文/密文
+  const [progress, setProgress] = useState(0)
 
   const handleUpdatePassword = async () => {
     // 1. 基础非空校验
@@ -48,20 +53,49 @@ export default function ChangePassword() {
     }
 
     setLoading(true)
+    setProgress(0)
     try {
-      await apiService.post('/user/change-password', { currentPassword, newPassword })
+      const { masterKey, user, system_pepper } = useAuthStore.getState()
+      const response = await apiService.get('/password')
+      const allItems = response?.passwords || []
 
-      router.replace('/auth/sign-out')
-      Alert.alert('成功', '密码已成功修改，请重新登录')
+      if (!masterKey) {
+        Alert.alert('错误', '主密钥已失效，请重新登录')
+        return
+      }
+      if (!user || !user.id) {
+        Alert.alert('错误', '用户信息已失效，请重新登录')
+        return
+      }
+      // 重新加密所有密码项，并更新 masterKey
+      const { reEncryptedItems } = await resetMasterKeyAndReEncrypt(
+        allItems,
+        masterKey,
+        newPassword,
+        user.id,
+        system_pepper,
+        (p) => setProgress(p), // 更新进度条
+      )
+
+      // 2. 发起请求，重置主密码并更新服务器密码项数据
+      await apiService.post('/user/reset-master-password', {
+        currentPassword,
+        newPassword,
+        items: reEncryptedItems,
+      })
+
+      // 3. 强制重新登录
+      Alert.alert('成功', '密码已成功修改，请重新登录', [
+        { text: '确定', onPress: () => router.replace('/auth/sign-out') },
+      ])
     } catch (error) {
-      Alert.alert('失败', error?.data?.errors[0] || '当前密码错误或系统繁忙')
-    } finally {
+      Alert.alert('失败', error?.data?.errors[0] || error.message || '当前密码错误或系统繁忙')
       setLoading(false)
     }
   }
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+  const renderContent = () => {
+    return (
       <View style={styles.content}>
         <Text style={[styles.guideText, { color: theme.textSecondary }]}>
           为了保障您的账号安全，请定期更换密码。
@@ -132,6 +166,38 @@ export default function ChangePassword() {
           )}
         </TouchableOpacity>
       </View>
+    )
+  }
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {renderContent()}
+      <Modal
+        transparent
+        visible={loading}
+        animationType="fade"
+        onRequestClose={() => {
+          Alert.alert('安全提示', '正在重加密数据，请稍等...')
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <ActivityIndicator size="large" color={theme.buttonColor} />
+            <Text style={[styles.modalTitle, { color: theme.text }]}>更新密码</Text>
+            <View style={styles.progressBarContainer}>
+              <View
+                style={[
+                  styles.progressBar,
+                  { width: `${progress}%`, backgroundColor: theme.buttonColor },
+                ]}
+              />
+            </View>
+            <Text style={[styles.modalProgressText, { color: theme.textSecondary }]}>
+              正在重加密数据... {progress}%
+            </Text>
+            <Text style={styles.modalWarning}>请勿关闭应用或切换后台</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -174,4 +240,34 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20 },
+  progressBarContainer: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginTop: 20,
+    overflow: 'hidden',
+  },
+  progressBar: { height: '100%' },
+  modalProgressText: { marginTop: 12, fontSize: 14 },
+  modalWarning: { marginTop: 8, fontSize: 12, color: '#ff4d4f', fontWeight: '500' },
 })

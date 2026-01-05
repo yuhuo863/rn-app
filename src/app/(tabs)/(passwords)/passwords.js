@@ -1,14 +1,15 @@
-import { StyleSheet, TouchableOpacity, Platform } from 'react-native'
+import { StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useEffect, useMemo, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSharedValue } from 'react-native-reanimated'
 import { FontAwesome } from '@expo/vector-icons'
-import * as SecureStore from 'expo-secure-store'
+import * as ScreenCapture from 'expo-screen-capture'
 
 import apiService from '@/utils/request'
-import { useNotifications } from '@/utils/context/NotificationContext'
+import { useSession } from '@/utils/ctx'
+import { getSecureDataWithBiometrics } from '@/utils/crypto'
 
 import RecycleBin from '@/components/passwords/RecycleBin'
 import PasswordGrid from '@/components/passwords/PasswordGrid'
@@ -21,36 +22,30 @@ import NetworkError from '@/components/shared/NetworkError'
 import useFetchData from '@/hooks/useFetchData'
 import { useTheme } from '@/theme/useTheme'
 import useCategoryStore from '@/stores/useCategoryStore'
-import * as ScreenCapture from 'expo-screen-capture'
+import useAuthStore from '@/stores/useAuthStore'
+import useNotifyStore from '@/stores/useNotifyStore'
 
 export default function Index() {
   const router = useRouter()
   const { theme } = useTheme()
   const { filterId, filterName } = useLocalSearchParams()
 
-  const { updateUnreadStatus } = useNotifications()
   const { data: checkRes } = useFetchData('/notice/check')
   useEffect(() => {
     if (checkRes) {
-      updateUnreadStatus(checkRes.hasUnread)
+      useNotifyStore.getState().updateUnreadStatus(checkRes.hasUnread)
     }
   }, [checkRes])
 
+  const passwordVersion = useNotifyStore((state) => state.passwordVersion)
   const { data, loading, error, refreshing, onReload, onRefresh } = useFetchData('/password')
   const { categories, isLoading, fetchCategories } = useCategoryStore()
 
-  useFocusEffect(
-    useCallback(() => {
-      async function checkReload() {
-        const needsRefresh = await SecureStore.getItemAsync('passwordListNeedsRefresh')
-        if (needsRefresh) {
-          await onReload({ silent: true })
-          await SecureStore.deleteItemAsync('passwordListNeedsRefresh')
-        }
-      }
-      void checkReload()
-    }, []),
-  )
+  useEffect(() => {
+    if (passwordVersion) {
+      onReload()
+    }
+  }, [passwordVersion])
 
   // 初始化筛选条件
   useEffect(() => {
@@ -67,6 +62,33 @@ export default function Index() {
       fetchCategories()
     }
   }, [])
+
+  const { session } = useSession()
+  const { masterKey } = useAuthStore.getState()
+  useEffect(() => {
+    const checkBiometricUnlock = async () => {
+      // 如果有登录态但内存里没有 Key，尝试识别
+      if (session && !masterKey) {
+        const secureData = await getSecureDataWithBiometrics()
+        if (secureData) {
+          useAuthStore.getState().setMasterKey(secureData.masterKey)
+          useAuthStore.getState().setSystemPepper(secureData.systemPepper)
+          // 此时页面会自动重新渲染，解密函数就能正常工作了
+        } else {
+          // 如果用户取消识别或识别失败，建议引导回登录页或保持锁定状态
+          Alert.alert('提示', '请重新登录以解锁数据', [
+            {
+              text: '重新登录',
+              onPress: () => router.replace('/auth/sign-out'),
+            },
+            { text: '取消', style: 'cancel' },
+          ])
+        }
+      }
+    }
+
+    void checkBiometricUnlock()
+  }, [session, masterKey])
 
   // 阻止截图
   useEffect(() => {
@@ -100,8 +122,7 @@ export default function Index() {
     await apiService.delete(`/password/${id}`)
     await onReload({ silent: true })
     await fetchCategories() // 用于刷新分类列表对应分类的passwordsCount
-    // 标记回收站页面需要刷新
-    await SecureStore.setItemAsync('recycleBinNeedsRefresh', 'true')
+    useNotifyStore.getState().notifyTrashUpdated()
   }
 
   const [searchQuery, setSearchQuery] = useState('')
