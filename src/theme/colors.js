@@ -33,7 +33,7 @@ export const lightColors = {
   // --- 交互区域 ---
   activeSwitch: '#4f46e5', // indigo-600，开关激活态
   inactiveSwitch: '#eef2ff', // indigo-50，开关非激活态
-  textInputBackground: '#f1f5f9',
+  textInputBackground: '#f2f2f2',
 
   iconContainer: '#eef2ff', // 实色浅 indigo，清晰可见
   iconColor: '#4f46e5',
@@ -86,7 +86,7 @@ export const darkColors = {
   textInputBackground: '#1e293b',
 
   iconContainer: '#312e81', // 深 indigo 实色，清晰
-  iconColor: '#c7d2fe', // 浅 indigo
+  iconColor: '#c7d2fe', // 浅 indigo-100，清晰可见
 
   buttonColor: '#6366f1', // indigo-500，按钮稍亮有活力
   buttonText: '#ffffff',

@@ -9,6 +9,8 @@ export default function PasswordGrid({
   onRefresh,
   onDelete,
   filterName,
+  filterIcon,
+  filterColor,
   globalIsDragging,
   globalIsOverZone,
 }) {
@@ -27,12 +29,14 @@ export default function PasswordGrid({
     <FlatList
       data={data}
       renderItem={renderItem}
-      keyExtractor={(item) => item.id.toString()}
+      keyExtractor={(item) => item.id}
       numColumns={2}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" />
       }
-      ListEmptyComponent={<EmptyState filterName={filterName} />}
+      ListEmptyComponent={
+        <EmptyState filterName={filterName} filterIcon={filterIcon} filterColor={filterColor} />
+      }
       contentContainerStyle={styles.listContent}
       columnWrapperStyle={styles.columnWrapper}
       removeClippedSubviews={Platform.OS === 'android'}

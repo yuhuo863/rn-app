@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import apiService from '@/utils/request'
 
 const useFetchData = (url, params = {}) => {
@@ -7,37 +7,40 @@ const useFetchData = (url, params = {}) => {
   const [error, setError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const fetchData = async () => {
-    try {
-      const data = await apiService.get(url, { params })
-      setData(data)
-    } catch (err) {
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // 使用 useCallback 保证函数引用稳定
+  const fetchData = useCallback(
+    async (isSilent = false) => {
+      // 关键修复：只有在非静默且当前无数据时，才展示 Loading
+      // 这避免了有数据时刷新导致的闪烁
+      if (!isSilent && !data) {
+        setLoading(true)
+      }
+      setError(false)
+
+      try {
+        const response = await apiService.get(url, { params })
+        setData(response) // 直接替换数据，React 会进行 Diff 更新，不会白屏
+      } catch (err) {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [url, JSON.stringify(params), data],
+  )
 
   const onReload = async (props = {}) => {
-    if (props.silent) {
-      setLoading(false)
-    } else {
-      setLoading(true)
-    }
-    setError(false)
-    await fetchData()
+    // 关键修复：完全静默，不触碰 loading 状态
+    const isSilent = props.silent || false
+    await fetchData(isSilent)
   }
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await fetchData()
+    await fetchData(true) // 刷新视为静默获取（因为有下拉指示器）
     setRefreshing(false)
   }
 
-  // 当依赖参数是一个对象或引用类型，例如 params，
-  // 即使它的内容没有变化，每次组件重新渲染时它的引用都会不同。
-  // 从而导致 useEffect 不断触发，会造成无限循环请求。
-  // 可以使用 JSON.stringify(params) 转换为字符串，来解决这个问题。
   useEffect(() => {
     fetchData()
   }, [url, JSON.stringify(params)])

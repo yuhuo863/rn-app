@@ -56,8 +56,17 @@ export default function ChangePassword() {
     setProgress(0)
     try {
       const { masterKey, user, system_pepper } = useAuthStore.getState()
-      const response = await apiService.get('/password')
-      const allItems = response?.passwords || []
+      // 1. 并行获取【正常列表】和【回收站列表】
+      const [activeRes, trashRes] = await Promise.all([
+        apiService.get('/password'),
+        apiService.get('/password/trash'),
+      ])
+
+      const activeItems = activeRes?.passwords || []
+      const trashItems = trashRes?.passwords || []
+
+      // 2. 合并所有需要重加密的数据
+      const allItems = [...activeItems, ...trashItems]
 
       if (!masterKey) {
         Alert.alert('错误', '主密钥已失效，请重新登录')
@@ -67,7 +76,14 @@ export default function ChangePassword() {
         Alert.alert('错误', '用户信息已失效，请重新登录')
         return
       }
-      // 重新加密所有密码项，并更新 masterKey
+
+      // TODO: 暂时不处理无数据情况，后续再优化逻辑
+      // if (allItems.length === 0) {
+      //   // ... 处理无数据情况
+      // } else {
+      //   // ... 重新加密所有密码项，并更新账号主密码
+      // }
+      // 重新加密所有密码项
       const { reEncryptedItems } = await resetMasterKeyAndReEncrypt(
         allItems,
         masterKey,
@@ -182,7 +198,7 @@ export default function ChangePassword() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             <ActivityIndicator size="large" color={theme.buttonColor} />
-            <Text style={[styles.modalTitle, { color: theme.text }]}>更新密码</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>密码重置</Text>
             <View style={styles.progressBarContainer}>
               <View
                 style={[

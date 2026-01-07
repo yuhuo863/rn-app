@@ -1,7 +1,7 @@
 import { StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSharedValue } from 'react-native-reanimated'
 import { FontAwesome } from '@expo/vector-icons'
@@ -9,7 +9,7 @@ import * as ScreenCapture from 'expo-screen-capture'
 
 import apiService from '@/utils/request'
 import { useSession } from '@/utils/ctx'
-import { getSecureDataWithBiometrics } from '@/utils/crypto'
+import { decryptField, getSecureDataWithBiometrics } from '@/utils/crypto'
 
 import RecycleBin from '@/components/passwords/RecycleBin'
 import PasswordGrid from '@/components/passwords/PasswordGrid'
@@ -28,7 +28,7 @@ import useNotifyStore from '@/stores/useNotifyStore'
 export default function Index() {
   const router = useRouter()
   const { theme } = useTheme()
-  const { filterId, filterName } = useLocalSearchParams()
+  const { filterId, filterName, filterIcon, filterColor } = useLocalSearchParams()
 
   const { data: checkRes } = useFetchData('/notice/check')
   useEffect(() => {
@@ -64,10 +64,10 @@ export default function Index() {
   }, [])
 
   const { session } = useSession()
-  const { masterKey } = useAuthStore.getState()
+  const masterKey = useAuthStore((state) => state.masterKey)
   useEffect(() => {
     const checkBiometricUnlock = async () => {
-      // 如果有登录态但内存里没有 Key，尝试识别
+      // 如果有登录态但内存(store)里没有 masterKey，则尝试通过生物识别解锁数据
       if (session && !masterKey) {
         const secureData = await getSecureDataWithBiometrics()
         if (secureData) {
@@ -128,33 +128,83 @@ export default function Index() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState(null)
   const [filterVisible, setFilterVisible] = useState(false)
-  const filteredData = useMemo(() => {
-    if (!data?.passwords) return []
+  const [filteredData, setFilteredData] = useState([])
+  useEffect(() => {
+    let isMounted = true
 
-    return data.passwords
-      .map((item) => {
-        // 动态匹配：从全局 categories 中实时查找该密码所属的分类信息
-        // 这样即便分类在另一个页面改了名，这里不需要刷新接口也会变
-        const currentCategory = categories.find((c) => c.id === item.categoryId)
-        return {
-          ...item,
-          category: currentCategory || item.category, // 优先使用全局最新数据
-        }
-      })
-      .filter((item) => {
-        const searchLower = searchQuery.toLowerCase().trim()
-        const matchesSearch = searchLower === '' || item.title?.toLowerCase().includes(searchLower)
+    const processData = async () => {
+      // 基础检查
+      if (!data?.passwords) {
+        if (isMounted) setFilteredData([])
+        return
+      }
+
+      // 如果没有 masterKey，返回原始数据或空（取决于你的业务逻辑）
+      if (!masterKey) {
+        if (isMounted) setFilteredData(data.passwords)
+        return
+      }
+
+      // 3. 先执行所有的解密
+      const processedItems = await Promise.all(
+        data.passwords.map(async (item) => {
+          const currentCategory = categories.find((c) => c.id === item.categoryId)
+
+          try {
+            // 执行解密
+            const decryptedTitle = decryptField(item.title, masterKey)
+            const decryptedUsername = decryptField(item.username, masterKey)
+
+            return {
+              ...item,
+              decryptedTitle, // 解密后的标题
+              decryptedUsername, // 解密后的用户名
+              category: currentCategory || item.category,
+            }
+          } catch (e) {
+            console.error('解密失败 item:', item.id, e)
+            return { ...item, category: currentCategory || item.category }
+          }
+        }),
+      )
+
+      // 4. 解密完成后，在内存中进行同步过滤
+      const searchLower = searchQuery.toLowerCase().trim()
+
+      const finalResult = processedItems.filter((item) => {
+        const matchesSearch =
+          searchLower === '' ||
+          (item.decryptedTitle && item.decryptedTitle.toLowerCase().includes(searchLower)) ||
+          (item.decryptedUsername && item.decryptedUsername.toLowerCase().includes(searchLower))
+
         const matchesCategory = activeCategory === null || item.categoryId === activeCategory
+
         return matchesSearch && matchesCategory
       })
-  }, [data?.passwords, searchQuery, activeCategory, categories]) // 依赖项加入 categories
 
+      // 5. 更新状态
+      if (isMounted) {
+        setFilteredData(finalResult)
+      }
+    }
+
+    processData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [data?.passwords, searchQuery, activeCategory, categories, masterKey])
   // 添加密码模态框是否可见
   const [modalVisible, setModalVisible] = useState(false)
 
   const handleClearFilter = () => {
     setActiveCategory(null)
-    router.setParams({ filterId: undefined, filterName: undefined })
+    router.setParams({
+      filterId: undefined,
+      filterName: undefined,
+      filterIcon: undefined,
+      filterColor: undefined,
+    })
   }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -188,6 +238,8 @@ export default function Index() {
               onRefresh={onRefresh}
               onDelete={handleDelete}
               filterName={filterName}
+              filterIcon={filterIcon}
+              filterColor={filterColor}
               globalIsDragging={globalIsDragging}
               globalIsOverZone={globalIsOverZone}
             />

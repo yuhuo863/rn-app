@@ -54,6 +54,8 @@ export default function Categories() {
       params: {
         filterId: item.id,
         filterName: item.name,
+        filterIcon: item.icon,
+        filterColor: item.color,
       },
     })
   }

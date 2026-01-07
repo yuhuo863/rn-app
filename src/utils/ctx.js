@@ -29,20 +29,40 @@ export function useSession() {
 export function SessionProvider({ children }) {
   const router = useRouter()
   const [[isLoading, session], setSession] = useStorageState('session')
+  // 初始化会话信息
+  const initializeSession = async (data, password) => {
+    const { token, user, system_pepper } = data
 
+    // 1. 派生主密钥
+    // 登录成功后，立即在本地利用原始密码派生主密钥
+    // 使用 userId 作为盐值，确保密钥的唯一性和确定性
+    const mKey = await deriveMasterKey(password, user.id, system_pepper)
+
+    // 2. 存入安全存储 (SecureStore)
+    // 生成功后，静默存入安全隔层
+    await saveSecureData(mKey, system_pepper)
+
+    // 3. 更新内存 Store
+    useAuthStore.getState().setMasterKey(mKey)
+    useAuthStore.getState().setSystemPepper(system_pepper)
+    useAuthStore.getState().setUser(user)
+
+    // 4. 持久化 Session Token
+    await setSession(token)
+  }
   return (
     <AuthContext.Provider
       value={{
         signUp: async (formParams, setLoading) => {
           try {
             const data = await apiService.post('/auth/register', formParams)
-            await setSession(data.token)
-            Alert.alert('提示', '您已经注册成功。', [
+            await initializeSession(data, formParams.password)
+            Alert.alert('提示', '您已经注册成功！', [
               {
                 text: 'OK',
                 onPress: () => {
                   setLoading(false)
-                  router.navigate('/users')
+                  router.navigate('/passwords')
                 },
               },
             ])
@@ -59,20 +79,7 @@ export function SessionProvider({ children }) {
           try {
             // 1. 调用后端登录接口 (发送明文密码进行 bcrypt 校验)
             const data = await apiService.post('/auth/login', formParams)
-            const { token, user, system_pepper } = data
-            // 2. 登录成功后，立即在本地利用原始密码派生主密钥
-            // 使用 userId 作为盐值，确保密钥的唯一性和确定性
-            const mKey = deriveMasterKey(formParams.password, user.id, system_pepper)
-            // 3. 生成功后，静默存入安全隔层
-            await saveSecureData(mKey, system_pepper)
-            // 4. 将派生出的密钥存入内存 Store，供后续加解密使用
-            useAuthStore.getState().setMasterKey(mKey)
-            // 5. 同时更新内存中的系统pepper信息
-            useAuthStore.getState().setSystemPepper(system_pepper)
-            // 6. 同时更新内存中的用户信息
-            useAuthStore.getState().setUser(user)
-            // 7. 将 token 存入本地存储，用于后续请求携带
-            await setSession(token)
+            await initializeSession(data, formParams.password)
             setLoading(false)
             router.navigate('/passwords')
           } catch (err) {

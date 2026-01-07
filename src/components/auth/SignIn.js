@@ -1,16 +1,9 @@
 import { Link } from 'expo-router'
 import { useState } from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableWithoutFeedback,
-  TouchableOpacity,
-} from 'react-native'
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { KeyboardProvider, KeyboardAwareScrollView } from 'react-native-keyboard-controller'
-
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useSession } from '@/utils/ctx'
 import Loading from '@/components/shared/Loading'
 
@@ -18,208 +11,250 @@ export default function SignIn(props) {
   const { setSelected } = props
   const { signIn } = useSession()
   const [hidePassword, setHidePassword] = useState(true)
-  const [formParams, setFormParams] = useState({
-    login: '',
-    password: '',
-  })
+  const [formParams, setFormParams] = useState({ login: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState({})
 
-  /**
-   * 表单输入
-   * @param text 输入的内容
-   * @param name 表单字段名
-   */
   const onChangeText = (text, name) => {
-    setFormParams((prev) => ({
-      ...prev,
-      [name]: text,
-    }))
+    setFormParams((prev) => ({ ...prev, [name]: text }))
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }))
   }
 
-  /**
-   * 提交表单
-   */
+  const validate = () => {
+    let valid = true
+    let newErrors = {}
+    if (!formParams.login) {
+      newErrors.login = '请输入用户名或邮箱'
+      valid = false
+    }
+    if (!formParams.password) {
+      newErrors.password = '请输入密码'
+      valid = false
+    }
+    setErrors(newErrors)
+    return valid
+  }
+
   const handleSubmit = () => {
+    Keyboard.dismiss()
+    if (!validate()) return
+
     setLoading(true)
     signIn(formParams, setLoading)
   }
 
   return (
     <KeyboardProvider>
-      <KeyboardAwareScrollView
-        style={styles.container}
-        bottomOffset={200} // 键盘弹出时，距离底部的偏移量
-        contentContainerStyle={styles.contentContainer}
-      >
-        {loading && <Loading message={'正在构建安全环境...'} />}
-
-        <View style={styles.content}>
-          <Link href="../" asChild>
-            <TouchableOpacity>
-              <Text style={styles.cancel}>跳过</Text>
-            </TouchableOpacity>
-          </Link>
-
-          <Text style={styles.title}>登录</Text>
-          <View style={styles.form}>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>用户名 / 邮箱</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="请输入用户名或邮箱"
-                  keyboardType={'email-address'}
-                  autoCapitalize={'none'}
-                  autoCorrect={false}
-                  onChangeText={(text) => onChangeText(text, 'login')}
-                />
-              </View>
+      <SafeAreaProvider>
+        {/* 使用 SafeAreaView 确保不被刘海遮挡 */}
+        <SafeAreaView style={styles.safeArea}>
+          <KeyboardAwareScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            bottomOffset={20}
+          >
+            {/* 顶部操作区 */}
+            <View style={styles.header}>
+              {/* 这里 Link 应该包裹 View 或 Text，保持点击区域 */}
+              <Link href="../" asChild>
+                <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Text style={styles.cancelText}>跳过</Text>
+                </TouchableOpacity>
+              </Link>
             </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>密码</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="请输入密码"
-                  autoCapitalize={'none'}
-                  autoCorrect={false}
-                  secureTextEntry={hidePassword}
-                  onChangeText={(text) => onChangeText(text, 'password')}
-                />
-                <TouchableWithoutFeedback onPress={() => setHidePassword(!hidePassword)}>
-                  <View style={styles.eyeIcon}>
-                    <MaterialCommunityIcons
-                      name={hidePassword ? 'eye-off' : 'eye-outline'}
-                      size={24}
-                      color={'#333'}
+            {/* 主内容区：使用 Flex 布局垂直居中或顶部排列 */}
+            <View style={styles.mainContent}>
+              <Text style={styles.title}>欢迎回来</Text>
+
+              <View style={styles.form}>
+                {/* 用户名输入 */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>账号</Text>
+                  <View style={[styles.inputWrapper, errors.login && styles.inputError]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="请输入用户名或邮箱"
+                      placeholderTextColor="#A0A0A0"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      value={formParams.login}
+                      onChangeText={(text) => onChangeText(text, 'login')}
                     />
                   </View>
-                </TouchableWithoutFeedback>
+                  {errors.login && <Text style={styles.errorText}>{errors.login}</Text>}
+                </View>
+
+                {/* 密码输入 */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>密码</Text>
+                  <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="请输入密码"
+                      placeholderTextColor="#A0A0A0"
+                      autoCapitalize="none"
+                      secureTextEntry={hidePassword}
+                      value={formParams.password}
+                      onChangeText={(text) => onChangeText(text, 'password')}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => setHidePassword(!hidePassword)}
+                    >
+                      <MaterialCommunityIcons
+                        name={hidePassword ? 'eye-off' : 'eye-outline'}
+                        size={24}
+                        color="#999"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                </View>
+
+                {/* 登录按钮 */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleSubmit}
+                  style={styles.submitBtn}
+                  disabled={loading}
+                >
+                  <Text style={styles.submitBtnText}>登 录</Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
 
-          <TouchableWithoutFeedback onPress={handleSubmit}>
-            <View style={styles.submitWrapper}>
-              <Text style={styles.submit}>登录</Text>
+            {/* 底部切换区：自然流布局，不需要 absolute */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>新用户请从这里开始</Text>
+              <TouchableOpacity style={styles.footerLinkBtn} onPress={() => setSelected('signUp')}>
+                <Text style={styles.footerLinkText}>注册账号</Text>
+                <MaterialCommunityIcons name="arrow-right" size={20} color="#629BF0" />
+              </TouchableOpacity>
             </View>
-          </TouchableWithoutFeedback>
-        </View>
+          </KeyboardAwareScrollView>
 
-        <View style={styles.noticeWrapper}>
-          <Text style={styles.notice}>新用户请从这里开始 </Text>
-          <MaterialCommunityIcons name={'arrow-right'} size={22} color={'#fff'} />
-          <TouchableOpacity onPress={() => setSelected('signUp')}>
-            <Text style={styles.noticeLink}>注册</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAwareScrollView>
+          {/* Loading 放在最外层，使用绝对定位覆盖 */}
+          {loading && <Loading message="正在构建安全环境..." />}
+        </SafeAreaView>
+      </SafeAreaProvider>
     </KeyboardProvider>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    position: 'relative',
     backgroundColor: '#fff',
   },
-  contentContainer: {
+  scrollContent: {
+    flexGrow: 1, // 关键：允许内容撑满屏幕，即使内容很少
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    justifyContent: 'space-between', // 关键：让头部、内容、底部分布
+  },
+  header: {
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginTop: 10,
+  },
+  cancelText: {
+    fontSize: 16,
+    color: '#8E8E93',
+  },
+  mainContent: {
+    flex: 1, // 占据中间剩余空间
+    justifyContent: 'center', // 垂直居中
     paddingBottom: 40,
   },
-  content: {
-    paddingHorizontal: 20,
-    marginTop: 68,
-  },
-  cancel: {
-    alignSelf: 'flex-end',
-    color: '#629BF0',
-  },
   title: {
-    fontSize: 28,
-    marginTop: 28,
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   form: {
-    marginTop: 29,
+    width: '100%',
   },
-  formGroup: {
-    marginBottom: 20,
+  inputGroup: {
+    marginBottom: 24,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 8,
   },
   inputWrapper: {
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA', // 浅灰背景，比只有下划线更现代
+    borderRadius: 12,
+    height: 56,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputError: {
+    borderColor: '#FF3B30',
+    backgroundColor: '#FFF0F0',
   },
   input: {
-    fontSize: 15,
-    fontWeight: '300',
-    color: '#404044',
-    backgroundColor: '#F8F8F8',
-    height: 50,
-    marginTop: 6,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-  },
-  inputFocused: {
-    borderBottomColor: '#629BF0',
+    flex: 1,
+    fontSize: 16,
+    color: '#1A1A1A',
+    height: '100%',
   },
   eyeIcon: {
-    position: 'absolute',
-    right: 15,
-    top: 20,
-    backgroundColor: 'transparent',
+    padding: 8,
   },
-  inputIcon: {
-    position: 'absolute',
-    right: 15,
-    top: 20,
-    color: '#DEDEE2',
-  },
-  inputIconSuccess: {
-    color: '#629BF0',
-  },
-  forgetPassword: {
+  errorText: {
     fontSize: 12,
-    color: '#629BF0',
-    fontWeight: 'bold',
-    textAlign: 'right',
-    marginTop: 5,
+    color: '#FF3B30',
+    marginTop: 4,
+    marginLeft: 4,
   },
-  submitWrapper: {
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: '#629BF0',
-    width: 206,
-    height: 48,
-    alignSelf: 'center',
+  submitBtn: {
+    height: 56,
+    backgroundColor: '#629BF0',
+    borderRadius: 28, // 全圆角
     justifyContent: 'center',
-    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#629BF0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  submit: {
-    textAlign: 'center',
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#629BF0',
+  submitBtnText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
   },
-  noticeWrapper: {
-    position: 'absolute',
-    bottom: -272,
-    height: 48,
-    width: '100%',
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#9DC5F7',
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
   },
-  notice: {
-    color: '#fff',
-    fontSize: 12,
+  footerText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginRight: 6,
   },
-  noticeLink: {
-    color: '#fff',
+  footerLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footerLinkText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#629BF0',
+    marginRight: 2,
   },
 })

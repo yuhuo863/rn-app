@@ -1,9 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { SimpleLineIcons } from '@expo/vector-icons'
 
-/**
- * 暂无数据
- */
+// 空状态组件
 export default function CommonEmptyState() {
   return (
     <View style={styles.notice}>
@@ -15,11 +13,11 @@ export default function CommonEmptyState() {
 
 const styles = StyleSheet.create({
   notice: {
-    height: 500,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
+    height: 600,
   },
   noticeMsg: {
     color: '#999',

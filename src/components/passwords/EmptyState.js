@@ -2,12 +2,16 @@ import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
 
-export default function EmptyState({ filterName }) {
+export default function EmptyState({
+  filterName,
+  filterIcon = 'folder-open-o',
+  filterColor = '#cbd5e1',
+}) {
   return (
     <View style={styles.container}>
       <View style={styles.iconOuter}>
         <View style={styles.iconInner}>
-          <FontAwesome name="folder-open-o" size={50} color="#cbd5e1" />
+          <FontAwesome name={filterIcon} size={50} color={filterColor} />
         </View>
       </View>
       <Text style={styles.title}>{filterName ? `"${filterName}" 暂无记录` : '这里空空如也'}</Text>
@@ -17,7 +21,7 @@ export default function EmptyState({ filterName }) {
           : '开始记录您的第一条加密信息吧'}
       </Text>
       <View style={styles.guideBox}>
-        <Text style={styles.guideText}>点击下方蓝色按钮添加</Text>
+        <Text style={styles.guideText}>点击下方按钮添加</Text>
       </View>
     </View>
   )

@@ -43,20 +43,17 @@ export default function Password() {
   const timerRef = useRef(null)
 
   useEffect(() => {
-    const decryptAllFields = async () => {
+    const decryptAllFields = () => {
       // 只有当 API 数据返回且 masterKey 存在时才执行
       if (data?.password && masterKey) {
         try {
           const item = data.password
 
-          // 并行解密所有字段
-          const [title, username, password, notes, site_url] = await Promise.all([
-            decryptField(item.title, masterKey),
-            decryptField(item.username, masterKey),
-            decryptField(item.password, masterKey),
-            item.notes ? decryptField(item.notes, masterKey) : Promise.resolve(''),
-            item.site_url ? decryptField(item.site_url, masterKey) : Promise.resolve(''),
-          ])
+          const title = decryptField(item.title, masterKey)
+          const username = decryptField(item.username, masterKey)
+          const password = decryptField(item.password, masterKey)
+          const notes = item.notes ? decryptField(item.notes, masterKey) : ''
+          const site_url = item.site_url ? decryptField(item.site_url, masterKey) : ''
 
           setDecryptedData({
             ...item, // 保留原有的 id, category 等非加密信息

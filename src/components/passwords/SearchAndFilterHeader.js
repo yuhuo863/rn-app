@@ -19,40 +19,67 @@ export default function SearchAndFilterHeader({
       <View
         style={[styles.searchContainer, { backgroundColor: theme.card, borderColor: theme.border }]}
       >
-        <FontAwesome name="search" size={16} color="#94a3b8" style={styles.searchIcon} />
+        <FontAwesome
+          name="search"
+          size={16}
+          color={theme.textSecondary}
+          style={styles.searchIcon}
+        />
+
         <TextInput
-          style={[styles.input, { color: theme.textSecondary }]}
+          style={[styles.input, { color: theme.text }]}
           placeholder="搜索标题或用户名..."
           placeholderTextColor={theme.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
+          returnKeyType="search"
+          autoCapitalize="none"
+          autoCorrect={false}
         />
+
+        {/* 优化：如果有输入内容，显示清除按钮 */}
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10} style={styles.clearBtn}>
+            <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+          </TouchableOpacity>
+        )}
+
+        <View style={[styles.verticalDivider, { backgroundColor: theme.border }]} />
+
         <TouchableOpacity
           style={[
             styles.filterBtn,
-            { backgroundColor: theme.background, borderColor: theme.border },
-            activeCategory && [
-              styles.filterBtnActive,
-              { backgroundColor: theme.textSecondary, borderColor: theme.textSecondary },
-            ],
+            activeCategory && { backgroundColor: theme.primary + '15' }, // 激活时显示淡色背景
           ]}
           onPress={onOpenFilter}
         >
-          <Ionicons name="filter" size={24} color={activeCategory ? '#fff' : '#64748b'} />
+          <Ionicons
+            name="filter"
+            size={22}
+            color={activeCategory ? theme.primary : theme.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
+      {/* 选中分类的 Chip 展示区 */}
       {activeCategory && (
         <View style={styles.chipRow}>
-          <View style={styles.chipOuter}>
-            <View style={styles.chipInner}>
-              <FontAwesome name={activeCat?.icon || 'tag'} size={14} color="#3b82f6" />
-              <Text style={styles.chipText}>{activeCat?.name || '已选分类'}</Text>
-              <TouchableOpacity onPress={onClearFilter}>
-                <Ionicons name="close-circle" size={18} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <TouchableOpacity
+            style={[styles.chip, { backgroundColor: theme.card, borderColor: theme.border }]}
+            onPress={onOpenFilter} // 点击 Chip 也能重新选择
+          >
+            <FontAwesome
+              name={activeCat?.icon || 'tag'}
+              size={12}
+              color={activeCat?.color || theme.textSecondary}
+            />
+            <Text style={[styles.chipText, { color: theme.text }]}>
+              {activeCat?.name || '未知分类'}
+            </Text>
+            <TouchableOpacity onPress={onClearFilter} hitSlop={10}>
+              <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -60,57 +87,65 @@ export default function SearchAndFilterHeader({
 }
 
 const styles = StyleSheet.create({
-  wrapper: { paddingTop: 20, paddingBottom: 10, backgroundColor: '#f8fafc' },
+  wrapper: {
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    marginHorizontal: 20,
-    height: 46,
+    marginHorizontal: 16,
+    height: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    paddingLeft: 12,
+    paddingRight: 6, // 右侧留空给 filter 按钮
   },
-  searchIcon: { marginRight: 8 },
-  input: { flex: 1, fontSize: 15, color: '#1e293b' },
+  searchIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    height: '100%',
+  },
+  clearBtn: {
+    padding: 4,
+    marginRight: 4,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 8,
+  },
   filterBtn: {
-    width: 46,
-    height: 46,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginLeft: 10,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderRadius: 8,
   },
-  filterBtnActive: { backgroundColor: '#3b82f6', borderColor: '#3b82f6' },
-  chipRow: { flexDirection: 'row', paddingHorizontal: 25, marginTop: 10 },
-  chipOuter: {
-    backgroundColor: '#E0E5EC',
-    borderRadius: 20,
-    shadowColor: '#A3B1C6',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
-    elevation: 4,
+  chipRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 10,
   },
-  chipInner: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: -3, height: -3 },
-    shadowOpacity: 1,
-    shadowRadius: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
-  chipText: { fontSize: 13, fontWeight: '800', color: '#444', marginHorizontal: 8 },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginHorizontal: 6,
+  },
 })
