@@ -5,20 +5,19 @@ import apiService from '@/utils/request'
 export default function useLoadMore(url, key, setData) {
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [page, setPage] = useState(1)
 
   const onEndReached = async () => {
     if (loading) return
     if (!hasMore) return
 
     setLoading(true)
-    const nextPage = currentPage + 1
-    setCurrentPage(nextPage)
+    const nextPage = page + 1
+    setPage(nextPage)
     try {
       const data = await apiService.get(url, {
         params: {
-          paranoid: 'true',
-          currentPage: nextPage,
+          page: nextPage,
         },
       })
       if (data[key].length === 0) {
@@ -51,8 +50,14 @@ export default function useLoadMore(url, key, setData) {
     )
   }
 
+  const resetLoadMore = () => {
+    setHasMore(true)
+    setPage(1)
+  }
+
   return {
     onEndReached,
+    resetLoadMore,
     LoadMoreFooter,
   }
 }

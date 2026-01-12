@@ -1,11 +1,12 @@
 import { StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { useSharedValue } from 'react-native-reanimated'
 import { FontAwesome } from '@expo/vector-icons'
 import * as ScreenCapture from 'expo-screen-capture'
+import Fuse from 'fuse.js'
 
 import apiService from '@/utils/request'
 import { useSession } from '@/utils/ctx'
@@ -35,7 +36,7 @@ export default function Index() {
     if (checkRes) {
       useNotifyStore.getState().updateUnreadStatus(checkRes.hasUnread)
     }
-  }, [checkRes])
+  }, [])
 
   const passwordVersion = useNotifyStore((state) => state.passwordVersion)
   const { data, loading, error, refreshing, onReload, onRefresh } = useFetchData('/password')
@@ -128,72 +129,52 @@ export default function Index() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState(null)
   const [filterVisible, setFilterVisible] = useState(false)
-  const [filteredData, setFilteredData] = useState([])
-  useEffect(() => {
-    let isMounted = true
+  // 1. 在内存中解密全量数据，并使用 useMemo 避免重复解密
+  const decryptedList = useMemo(() => {
+    if (!data?.passwords || !masterKey) return []
 
-    const processData = async () => {
-      // 基础检查
-      if (!data?.passwords) {
-        if (isMounted) setFilteredData([])
-        return
+    return data.passwords.map((item) => {
+      try {
+        return {
+          ...item,
+          displayTitle: decryptField(item.title, masterKey),
+          displayUsername: decryptField(item.username, masterKey),
+        }
+      } catch (e) {
+        console.error('解密失败:', e)
+        return { ...item, displayTitle: '解密错误', displayUsername: '' }
       }
+    })
+  }, [data?.passwords, masterKey])
+  // 2. 初始化 Fuse.js 实例
+  const fuse = useMemo(() => {
+    return new Fuse(decryptedList, {
+      keys: [
+        { name: 'displayTitle', weight: 0.7 }, // 标题权重更高
+        { name: 'displayUsername', weight: 0.3 },
+      ],
+      threshold: 0.4, // 模糊匹配阈值，0.0 为精确匹配，1.0 匹配所有
+      distance: 100, // 模糊匹配距离，数值越大越宽松
+      ignoreLocation: true, // 不在乎模式在字符串中出现的位置
+    })
+  }, [decryptedList])
+  // 3. 计算最终展示的过滤数据
+  const filteredData = useMemo(() => {
+    let list = decryptedList
 
-      // 如果没有 masterKey，返回原始数据或空（取决于你的业务逻辑）
-      if (!masterKey) {
-        if (isMounted) setFilteredData(data.passwords)
-        return
-      }
-
-      // 3. 先执行所有的解密
-      const processedItems = await Promise.all(
-        data.passwords.map(async (item) => {
-          const currentCategory = categories.find((c) => c.id === item.categoryId)
-
-          try {
-            // 执行解密
-            const decryptedTitle = decryptField(item.title, masterKey)
-            const decryptedUsername = decryptField(item.username, masterKey)
-
-            return {
-              ...item,
-              decryptedTitle, // 解密后的标题
-              decryptedUsername, // 解密后的用户名
-              category: currentCategory || item.category,
-            }
-          } catch (e) {
-            console.error('解密失败 item:', item.id, e)
-            return { ...item, category: currentCategory || item.category }
-          }
-        }),
-      )
-
-      // 4. 解密完成后，在内存中进行同步过滤
-      const searchLower = searchQuery.toLowerCase().trim()
-
-      const finalResult = processedItems.filter((item) => {
-        const matchesSearch =
-          searchLower === '' ||
-          (item.decryptedTitle && item.decryptedTitle.toLowerCase().includes(searchLower)) ||
-          (item.decryptedUsername && item.decryptedUsername.toLowerCase().includes(searchLower))
-
-        const matchesCategory = activeCategory === null || item.categoryId === activeCategory
-
-        return matchesSearch && matchesCategory
-      })
-
-      // 5. 更新状态
-      if (isMounted) {
-        setFilteredData(finalResult)
-      }
+    // 分类过滤
+    if (activeCategory) {
+      list = list.filter((item) => item.categoryId === activeCategory)
     }
 
-    processData()
-
-    return () => {
-      isMounted = false
+    // 执行 Fuse.js 模糊搜索
+    if (searchQuery.trim().length > 0) {
+      const searchResults = fuse.search(searchQuery)
+      list = searchResults.map((result) => result.item)
     }
-  }, [data?.passwords, searchQuery, activeCategory, categories, masterKey])
+
+    return list
+  }, [searchQuery, activeCategory, decryptedList, fuse])
   // 添加密码模态框是否可见
   const [modalVisible, setModalVisible] = useState(false)
 

@@ -140,7 +140,7 @@ export default function DraggablePasswordCard({
 
             <View style={styles.titleSection}>
               <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-                {item.decryptedTitle || '需解锁以查看'}
+                {item.displayTitle || '需解锁以查看'}
               </Text>
             </View>
 
@@ -150,7 +150,7 @@ export default function DraggablePasswordCard({
               <View style={styles.infoRow}>
                 <FontAwesome name="user" size={12} color="#94a3b8" style={styles.infoIcon} />
                 <Text style={[styles.infoText, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {item.decryptedUsername || '需解锁以查看'}
+                  {item.displayUsername || '需解锁以查看'}
                 </Text>
               </View>
               <View style={styles.infoRow}>

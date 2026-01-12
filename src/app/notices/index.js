@@ -14,26 +14,9 @@ import NetworkError from '@/components/shared/NetworkError'
 import { useEffect } from 'react'
 import { router } from 'expo-router'
 import useNotifyStore from '@/stores/useNotifyStore'
-
-const formatTime = (dateString) => {
-  const now = new Date()
-  const date = new Date(dateString)
-  const diff = (now - date) / 1000 // 秒数差
-
-  if (diff < 60) return '刚刚'
-  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
-
-  const days = Math.floor(diff / 86400)
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days}天前`
-
-  // 超过7天，显示具体日期 YYYY-MM-DD
-  const year = date.getFullYear()
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const day = date.getDate().toString().padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+import CommonEmptyState from '@/components/shared/CommonEmptyState'
+import useLoadMore from '@/hooks/useLoadMore'
+import { formatActionTime } from '@/utils/time'
 
 // 2. 图标配置映射 (根据 type)
 const getNoticeConfig = (type, theme) => {
@@ -58,15 +41,25 @@ export default function NotificationList() {
   const { theme } = useTheme()
   const {
     data: noticesData,
+    setData,
     loading,
     refreshing,
     onRefresh,
     error,
     onReload,
   } = useFetchData('/notice')
+  const { onEndReached, resetLoadMore, LoadMoreFooter } = useLoadMore('/notice', 'notices', setData)
   useEffect(() => {
     useNotifyStore.getState().clearUnread()
   }, [])
+
+  /**
+   * 下拉刷新，并重置加载更多状态
+   */
+  const handleRefresh = async () => {
+    await onRefresh()
+    resetLoadMore()
+  }
 
   const renderItem = ({ item }) => {
     const config = getNoticeConfig(item.type, theme)
@@ -86,7 +79,7 @@ export default function NotificationList() {
           <View style={styles.cardHeader}>
             <Text style={[styles.itemTitle, { color: theme.text }]}>{item.title}</Text>
             <Text style={[styles.timeText, { color: theme.textTertiary }]}>
-              {formatTime(item.createdAt)}
+              {formatActionTime(item.createdAt)}
             </Text>
           </View>
           <Text style={[styles.itemContent, { color: theme.textSecondary }]} numberOfLines={2}>
@@ -119,15 +112,14 @@ export default function NotificationList() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={onRefresh}
+            onRefresh={handleRefresh}
             tintColor={theme.textTertiary}
           />
         }
-        ListEmptyComponent={
-          <Text style={{ textAlign: 'center', color: theme.textSecondary, marginTop: 50 }}>
-            暂无通知
-          </Text>
-        }
+        ListEmptyComponent={<CommonEmptyState />}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={LoadMoreFooter}
       />
     </View>
   )
@@ -142,7 +134,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    alignItems: 'flex-start', // 改为顶部对齐，防止多行内容导致图标位置奇怪
+    alignItems: 'flex-start',
     // 阴影
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

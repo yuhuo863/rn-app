@@ -54,7 +54,7 @@ const getHourglassIcon = (days) => {
   return 'hourglass-o'
 }
 
-// --- 关键修复：将 SwipeableItem 移出主组件，并使用 memo 优化 ---
+// 将 SwipeableItem 移出主组件，并使用 memo 优化 ---
 const SwipeableItem = memo(
   ({ item, isSelectionMode, isSelected, onRestore, onLongPress, onPress, theme, masterKey }) => {
     // 动画值引用
@@ -83,7 +83,7 @@ const SwipeableItem = memo(
           toValue: 500,
           duration: 350,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: false, // 布局属性不能用 NativeDriver
+          useNativeDriver: false,
         }),
         Animated.timing(opacity, {
           toValue: 0,
@@ -91,7 +91,7 @@ const SwipeableItem = memo(
           useNativeDriver: false,
         }),
         Animated.sequence([
-          Animated.delay(150), // 稍微延迟高度塌陷，让滑动效果展示出来
+          Animated.delay(150),
           Animated.parallel([
             Animated.timing(itemHeight, {
               toValue: 0,
@@ -107,7 +107,7 @@ const SwipeableItem = memo(
         ]),
       ]).start(({ finished }) => {
         if (finished) {
-          // 关键：在下一帧调用父组件更新，避免动画被 React 渲染打断
+          // 在下一帧调用父组件更新，避免动画被 React 渲染打断
           requestAnimationFrame(() => {
             onRestore(item)
           })
@@ -192,8 +192,6 @@ const SwipeableItem = memo(
     )
   },
   (prev, next) => {
-    // 性能优化的核心：自定义比较函数
-    // 只有当选中状态改变、模式改变、ID改变或主题改变时才重绘
     return (
       prev.isSelected === next.isSelected &&
       prev.isSelectionMode === next.isSelectionMode &&
@@ -216,7 +214,7 @@ export default function TrashScreen() {
 
   // 数据过滤：使用 useMemo 确保只在源数据或删除记录变化时计算
   const filteredPasswords = useMemo(() => {
-    if (!data?.passwords) return []
+    if (!data?.passwords || !masterKey) return []
     return data.passwords.filter((item) => !localDeletedIds.has(item.id))
   }, [data, localDeletedIds])
 
@@ -290,7 +288,6 @@ export default function TrashScreen() {
         await apiService.post('/password/restore', { id: item.id })
 
         // 2. 成功后静默刷新数据，确保数据一致性，但不触发 Loading 动画
-        // 注意：这里不需要 await onReload，让它在后台跑即可，避免阻塞交互
         fetchCategories()
         useNotifyStore.getState().notifyPasswordUpdated()
         onReload({ silent: true })
@@ -344,7 +341,7 @@ export default function TrashScreen() {
             // 操作完成后静默同步最新数据
             onReload({ silent: true })
           } catch (e) {
-            // 简单处理：如果批量失败，刷新全量数据以恢复状态
+            // 如果批量失败，刷新全量数据以恢复状态
             onReload()
             Alert.alert('操作失败', e.data?.errors?.[0] || '未知错误')
           }
@@ -364,7 +361,6 @@ export default function TrashScreen() {
   }
 
   // --- 渲染层 ---
-
   const renderItem = useCallback(
     ({ item }) => (
       <SwipeableItem

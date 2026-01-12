@@ -10,8 +10,7 @@ const useFetchData = (url, params = {}) => {
   // 使用 useCallback 保证函数引用稳定
   const fetchData = useCallback(
     async (isSilent = false) => {
-      // 关键修复：只有在非静默且当前无数据时，才展示 Loading
-      // 这避免了有数据时刷新导致的闪烁
+      // 只有在非静默且当前无数据时，才展示 Loading 避免了有数据时刷新导致的闪烁
       if (!isSilent && !data) {
         setLoading(true)
       }
@@ -30,7 +29,7 @@ const useFetchData = (url, params = {}) => {
   )
 
   const onReload = async (props = {}) => {
-    // 关键修复：完全静默，不触碰 loading 状态
+    // 完全静默，不触碰 loading 状态
     const isSilent = props.silent || false
     await fetchData(isSilent)
   }

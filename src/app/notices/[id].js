@@ -19,19 +19,17 @@ export default function NotificationDetails() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.noticeBackground }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        {/* 标题区域 */}
-        <Text style={styles.title}>{notice?.title}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{notice?.title}</Text>
 
-        {/* 元数据区域 (时间) */}
-        <Text style={styles.metaTime}>{notice?.createdAt}</Text>
+        <Text style={[styles.metaTime, { color: theme.textTertiary }]}>{notice?.createdAt}</Text>
 
-        {/* 分割线 */}
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: theme.textSecondary }]} />
 
-        {/* 正文区域 */}
-        <Text style={styles.bodyText}>{notice?.content.replace(/\\n/g, '\n')}</Text>
+        <Text style={[styles.bodyText, { color: theme.textSecondary }]}>
+          {notice?.content.replace(/\\n/g, '\n')}
+        </Text>
       </ScrollView>
     </View>
   )

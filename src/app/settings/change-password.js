@@ -1,12 +1,12 @@
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  Modal,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Modal,
+  View,
 } from 'react-native'
 import { useState } from 'react'
 import { useRouter } from 'expo-router'
@@ -29,25 +29,23 @@ export default function ChangePassword() {
 
   const handleUpdatePassword = async () => {
     // 1. 基础非空校验
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (
+      !currentPassword.trim().length ||
+      !newPassword.trim().length ||
+      !confirmPassword.trim().length
+    ) {
       Alert.alert('提示', '请填写所有密码字段')
       return
     }
 
-    // 2. 新旧密码一致性校验
-    if (currentPassword === newPassword) {
-      Alert.alert('提示', '新密码不能与当前密码相同')
-      return
-    }
-
-    // 3. 两次新密码一致性校验
-    if (newPassword !== confirmPassword) {
+    // 2. 两次新密码一致性校验
+    if (newPassword.trim() !== confirmPassword.trim()) {
       Alert.alert('校验失败', '两次输入的密码不一致')
       return
     }
 
-    // 4. 长度校验
-    if (newPassword.length < 8) {
+    // 3. 长度校验
+    if (newPassword.trim().length < 8) {
       Alert.alert('校验失败', '新密码长度至少为 8 位')
       return
     }
@@ -56,18 +54,6 @@ export default function ChangePassword() {
     setProgress(0)
     try {
       const { masterKey, user, system_pepper } = useAuthStore.getState()
-      // 1. 并行获取【正常列表】和【回收站列表】
-      const [activeRes, trashRes] = await Promise.all([
-        apiService.get('/password'),
-        apiService.get('/password/trash'),
-      ])
-
-      const activeItems = activeRes?.passwords || []
-      const trashItems = trashRes?.passwords || []
-
-      // 2. 合并所有需要重加密的数据
-      const allItems = [...activeItems, ...trashItems]
-
       if (!masterKey) {
         Alert.alert('错误', '主密钥已失效，请重新登录')
         return
@@ -76,28 +62,32 @@ export default function ChangePassword() {
         Alert.alert('错误', '用户信息已失效，请重新登录')
         return
       }
+      const allData = await apiService.get('/password/list-all')
 
-      // TODO: 暂时不处理无数据情况，后续再优化逻辑
-      // if (allItems.length === 0) {
-      //   // ... 处理无数据情况
-      // } else {
-      //   // ... 重新加密所有密码项，并更新账号主密码
-      // }
-      // 重新加密所有密码项
-      const { reEncryptedItems } = await resetMasterKeyAndReEncrypt(
-        allItems,
-        masterKey,
-        newPassword,
-        user.id,
-        system_pepper,
-        (p) => setProgress(p), // 更新进度条
-      )
+      const allItems = allData.passwords || []
+
+      let payloadItems
+      if (allItems.length === 0) {
+        payloadItems = []
+        setProgress(100)
+      } else {
+        // 重新加密所有密码项
+        const { reEncryptedItems } = await resetMasterKeyAndReEncrypt(
+          allItems,
+          masterKey, // 旧的主密钥（用于解密）
+          newPassword, // 新的明文密码（内部会生成新主密钥用于加密）
+          user.id,
+          system_pepper,
+          (p) => setProgress(p), // 更新进度条
+        )
+        payloadItems = [...reEncryptedItems]
+      }
 
       // 2. 发起请求，重置主密码并更新服务器密码项数据
       await apiService.post('/user/reset-master-password', {
         currentPassword,
         newPassword,
-        items: reEncryptedItems,
+        items: payloadItems,
       })
 
       // 3. 强制重新登录
