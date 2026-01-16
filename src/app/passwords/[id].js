@@ -16,14 +16,13 @@ import Loading from '@/components/shared/Loading'
 import apiService from '@/utils/request'
 import { useEffect, useRef, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import * as Clipboard from 'expo-clipboard'
-import Toast from 'react-native-root-toast'
 import PasswordFormModal from '@/components/passwords/PasswordFormModal'
 import { useTheme } from '@/theme/useTheme'
 import useCategoryStore from '@/stores/useCategoryStore'
 import useAuthStore from '@/stores/useAuthStore'
 import { decryptField } from '@/utils/crypto'
 import useNotifyStore from '@/stores/useNotifyStore'
+import { copyToClipboard } from '@/utils/clipboard'
 
 export default function Password() {
   const { theme } = useTheme()
@@ -143,29 +142,6 @@ export default function Password() {
     </Modal>
   )
 
-  const copyToClipboard = async (text, label) => {
-    if (!text) return
-    try {
-      await Clipboard.setStringAsync(text)
-      Toast.show(`${label}已复制`, {
-        duration: Toast.durations.SHORT,
-        position: Toast.positions.CENTER,
-        shadow: true,
-        animation: true,
-        hideOnPress: true,
-        delay: 0,
-        backgroundColor: '#334155', // 可以自定义背景色，建议与你的主题 darkGray 一致
-        textColor: '#ffffff',
-        containerStyle: {
-          borderRadius: 20,
-          paddingHorizontal: 20,
-        },
-      })
-    } catch (err) {
-      Alert.alert('错误', '复制失败，请重试')
-    }
-  }
-
   const renderContent = () => {
     if (loading || !decryptedData) return <Loading />
     if (error) return <NetworkError onReload={onReload} />
@@ -207,7 +183,7 @@ export default function Password() {
                   styles.urlContainer,
                   { backgroundColor: theme.background, borderColor: theme.border },
                 ]}
-                onPress={() => copyToClipboard(item.site_url, '网址')}
+                onPress={() => copyToClipboard(item.site_url, '网址', theme)}
               >
                 <FontAwesome name="globe" size={14} color="#64748b" />
                 <Text style={styles.urlText} numberOfLines={1}>
@@ -239,7 +215,7 @@ export default function Password() {
                     {item.username || '未设置'}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => copyToClipboard(item.username, '用户名')}
+                    onPress={() => copyToClipboard(item.username, '用户名', theme)}
                     style={styles.copyBtn}
                   >
                     <Ionicons name="copy-outline" size={18} color="#3b82f6" />

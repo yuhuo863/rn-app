@@ -12,7 +12,6 @@ import useNotifyStore from '@/stores/useNotifyStore'
 export default function Index() {
   const { theme } = useTheme()
   const router = useRouter()
-  // 1. 从 Store 获取 profileVersion
   const profileVersion = useNotifyStore((state) => state.profileVersion)
   const { data: user, error, loading, onReload } = useFetchData('user/me')
 
@@ -22,7 +21,6 @@ export default function Index() {
     }
   }, [profileVersion])
 
-  // 处理点击更新信息按钮
   const handleEditProfile = () => {
     router.push({
       pathname: '/profiles/edit',
@@ -43,10 +41,8 @@ export default function Index() {
         contentContainerStyle={[styles.scrollContainer, { backgroundColor: theme.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 顶部背景装饰 */}
         <View style={[styles.headerBanner, { backgroundColor: theme.headerBanner }]} />
 
-        {/* 用户基础信息卡片 */}
         <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
           <View style={[styles.avatarWrapper, { backgroundColor: theme.avatarBackground }]}>
             {user?.avatar ? (
@@ -69,7 +65,6 @@ export default function Index() {
           </Text>
         </View>
 
-        {/* 详细资料列表 */}
         <View style={[styles.infoSection, { backgroundColor: theme.card }]}>
           <View style={[styles.infoRow, { borderBottomColor: theme.border }]}>
             <View style={styles.infoLabelSide}>
@@ -89,7 +84,6 @@ export default function Index() {
           </View>
         </View>
 
-        {/* 更新信息操作按钮 */}
         <TouchableOpacity
           style={[styles.updateButton, { backgroundColor: theme.buttonColor }]}
           onPress={handleEditProfile}

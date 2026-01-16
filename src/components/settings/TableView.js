@@ -13,7 +13,6 @@ export function Section(props) {
       hideSurroundingSeparators={true}
       hideSeparator={true}
       roundedCorners={true}
-      sectionPaddingTop={20}
       {...props}
     />
   )

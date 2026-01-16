@@ -2,35 +2,32 @@ import { Alert, Platform, ScrollView, Share, StyleSheet } from 'react-native'
 import { TableView } from 'clwy-react-native-tableview-simple'
 import { Cell, Section } from '@/components/settings/TableView'
 import { useTheme } from '@/theme/useTheme'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import ThemeActionSheet from '@/components/settings/ThemeActionSheet'
 import { useRouter } from 'expo-router'
 import { useSession } from '@/utils/ctx'
-import { calculateAppCacheSize, clearAppCache } from '@/utils/cache'
+import ClipboardActionSheet from '@/components/settings/ClipboardActionSheet'
+import useSettingsStore from '@/stores/useSettingsStore'
 
 export default function Index() {
   const { destroyAccount } = useSession()
   const router = useRouter()
   const { theme, themeMode } = useTheme()
-  const [cacheSize, setCacheSize] = useState('0 MB')
-  /**
-   * 弹出外观设置选择器
-   */
+  // 弹出外观设置选择器
   const [isSheetVisible, setSheetVisible] = useState(false)
+  // 1. 增加状态记录用户的选择（实际开发中建议存入 AsyncStorage 或 Store）
+  const { clipboardTimeout, setClipboardTimeout } = useSettingsStore()
+  const [isClipboardSheetVisible, setClipboardSheetVisible] = useState(false)
 
+  const getClipboardLabel = (seconds) => {
+    if (seconds === 0) return '从不'
+    return `${seconds} 秒`
+  }
   // 显示当前外观模式
   const getModeLabel = (mode) => {
     const labels = { system: '跟随系统', light: '浅色', dark: '深色' }
     return labels[mode] || '跟随系统'
   }
-  // 初始化计算缓存大小
-  useEffect(() => {
-    const loadCacheSize = async () => {
-      const size = await calculateAppCacheSize()
-      setCacheSize(size)
-    }
-    void loadCacheSize()
-  }, [])
 
   // 分享应用
   const onShare = async () => {
@@ -43,17 +40,6 @@ export default function Index() {
     })
   }
 
-  // 清理缓存
-  const handleClearCache = async () => {
-    try {
-      await clearAppCache()
-      const size = await calculateAppCacheSize()
-      setCacheSize(size)
-      Alert.alert('清理成功', '缓存已清除')
-    } catch (e) {
-      Alert.alert('清理失败', '请稍后重试')
-    }
-  }
   // 注销账户
   const handleDestroyAccount = async () => {
     try {
@@ -108,10 +94,10 @@ export default function Index() {
             }}
           />
           <Cell
-            title="清理缓存"
-            detail={cacheSize}
+            title="清除剪贴板"
+            detail={getClipboardLabel(clipboardTimeout)}
             cellStyle="RightDetail"
-            onPress={handleClearCache}
+            onPress={() => setClipboardSheetVisible(true)}
           />
         </Section>
 
@@ -127,6 +113,13 @@ export default function Index() {
       </TableView>
 
       <ThemeActionSheet visible={isSheetVisible} onClose={() => setSheetVisible(false)} />
+      <ClipboardActionSheet
+        visible={isClipboardSheetVisible}
+        theme={theme}
+        currentValue={clipboardTimeout}
+        onSelect={setClipboardTimeout}
+        onClose={() => setClipboardSheetVisible(false)}
+      />
     </ScrollView>
   )
 }

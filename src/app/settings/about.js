@@ -12,14 +12,9 @@ export default function About() {
 
   const openUrl = async (url) => {
     try {
-      const supported = await Linking.canOpenURL(url)
-      if (supported) {
-        await Linking.openURL(url)
-      } else {
-        Alert.alert('无法打开链接', `无法处理此 URL: ${url}`)
-      }
+      await Linking.openURL(url)
     } catch (error) {
-      Alert.alert('错误', '无法打开该 URL')
+      Alert.alert('错误', '无法打开链接或未安装相关应用')
     }
   }
 
@@ -71,7 +66,7 @@ export default function About() {
             title="联系邮箱"
             accessory="DisclosureIndicator"
             onPress={() => {
-              const email = 'support@yuhuo863.top'
+              const email = '2581794560@qq.com'
               const subject = 'KeyVault 反馈'
               const mailtoUrl =
                 Platform.OS === 'ios'

@@ -7,7 +7,6 @@ const useFetchData = (url, params = {}) => {
   const [error, setError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  // 使用 useCallback 保证函数引用稳定
   const fetchData = useCallback(
     async (isSilent = false) => {
       // 只有在非静默且当前无数据时，才展示 Loading 避免了有数据时刷新导致的闪烁
