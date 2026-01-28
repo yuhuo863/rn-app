@@ -3,8 +3,6 @@ import argon2 from 'react-native-argon2'
 import { gcm } from '@noble/ciphers/aes.js'
 import { Buffer } from 'buffer'
 import * as SecureStore from 'expo-secure-store'
-import * as LocalAuthentication from 'expo-local-authentication'
-import { Alert } from 'react-native'
 
 /*
  * Argon2id Native 参数配置
@@ -87,8 +85,6 @@ export const decryptField = (encryptedString, masterKey) => {
   }
 }
 
-// --- Secure Store ---
-
 const SECURE_STORAGE_KEY = 'user_secure_vault_data'
 
 export const saveSecureData = async (masterKey, systemPepper) => {
@@ -100,39 +96,15 @@ export const saveSecureData = async (masterKey, systemPepper) => {
 
     const jsonString = JSON.stringify(dataToStore)
 
-    await SecureStore.setItemAsync(SECURE_STORAGE_KEY, jsonString, {
-      requireAuthentication: true, // 注意：如果设备没有设置密码/指纹，这一行在 Android 上会报错
-      keychainAccessible: SecureStore.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
-    })
-    // console.log('✅ Secure Data Saved Successfully')
+    await SecureStore.setItemAsync(SECURE_STORAGE_KEY, jsonString)
   } catch (error) {
-    console.error('❌ SecureStore Save Error:', error)
-
-    // 如果是模拟器或未设密码的真机，回退策略（可选）
-    // 或者提示用户设置密码
-    Alert.alert(
-      '无法启用生物识别',
-      '请检查您的设备是否设置了锁屏密码/指纹。在未设置锁屏密码的设备上无法安全存储密钥。\n\n(错误详情: ' +
-        error.message +
-        ')',
-    )
+    console.error('SecureStore save failed:', error)
   }
 }
 
-export const getSecureDataWithBiometrics = async () => {
+export const getSecureData = async () => {
   try {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync()
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync()
-
-    if (!hasHardware || !isEnrolled) {
-      console.log('Bioauth not available')
-      return null
-    }
-
-    const jsonString = await SecureStore.getItemAsync(SECURE_STORAGE_KEY, {
-      requireAuthentication: true,
-      authenticationPrompt: '验证身份以恢复密钥环境',
-    })
+    const jsonString = await SecureStore.getItemAsync(SECURE_STORAGE_KEY)
 
     if (jsonString) {
       const parsedData = JSON.parse(jsonString)

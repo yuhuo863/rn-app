@@ -2,8 +2,7 @@ import { Link } from 'expo-router'
 import { useState } from 'react'
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { KeyboardProvider, KeyboardAwareScrollView } from 'react-native-keyboard-controller'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { useSession } from '@/utils/ctx'
 import Loading from '@/components/shared/Loading'
 
@@ -11,36 +10,26 @@ export default function SignUp(props) {
   const { setSelected } = props
   const { signUp } = useSession()
 
-  // 状态管理
   const [hidePassword, setHidePassword] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState({}) // 用于存储字段错误信息
-
+  const [errors, setErrors] = useState({})
   const [formParams, setFormParams] = useState({
     email: '',
     username: '',
     password: '',
-    confirmPassword: '', // 确保这个字段也在状态中
+    confirmPassword: '',
   })
 
-  // 统一处理输入，输入时自动清除对应的错误提示
   const onChangeText = (text, name) => {
-    setFormParams((prev) => ({
-      ...prev,
-      [name]: text,
-    }))
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }))
-    }
+    setFormParams((prev) => ({ ...prev, [name]: text }))
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }))
   }
 
-  // 表单验证逻辑
   const validate = () => {
     Keyboard.dismiss()
     let valid = true
     let newErrors = {}
 
-    // 1. 邮箱验证 (简单正则)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!formParams.email) {
       newErrors.email = '请输入电子邮箱'
@@ -50,7 +39,6 @@ export default function SignUp(props) {
       valid = false
     }
 
-    // 2. 用户名验证
     if (!formParams.username) {
       newErrors.username = '请输入用户名'
       valid = false
@@ -59,13 +47,11 @@ export default function SignUp(props) {
       valid = false
     }
 
-    // 3. 密码验证
     if (!formParams.password) {
       newErrors.password = '请输入密码'
       valid = false
     }
 
-    // 4. 确认密码验证 (安全性关键)
     if (formParams.password !== formParams.confirmPassword) {
       newErrors.confirmPassword = '两次输入的密码不一致'
       valid = false
@@ -75,173 +61,155 @@ export default function SignUp(props) {
     return valid
   }
 
-  // 提交处理
   const handleSubmit = () => {
     Keyboard.dismiss()
     if (!validate()) return
 
     setLoading(true)
-
-    // 构造发送给后端的 payload
     const { confirmPassword, ...payload } = formParams
-
     signUp(payload, setLoading)
   }
 
   return (
-    <KeyboardProvider>
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.safeArea}>
-          <KeyboardAwareScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            bottomOffset={120}
-            enableOnAndroid={true}
-          >
-            {/* --- 顶部区域 --- */}
-            <View style={styles.header}>
-              <Link href="../" asChild>
-                <TouchableOpacity hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
-                  <Text style={styles.cancelText}>跳过</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
+    <View style={styles.container}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={120}
+        enableOnAndroid={true}
+      >
+        <View style={styles.header}>
+          <Link href="../" asChild>
+            <TouchableOpacity hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+              <Text style={styles.cancelText}>跳过</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
 
-            {/* --- 主内容区域 --- */}
-            <View style={styles.mainContent}>
-              <Text style={styles.title}>创建账户</Text>
+        <View style={styles.mainContent}>
+          <Text style={styles.title}>创建账户</Text>
 
-              <View style={styles.form}>
-                {/* 1. 邮箱输入 */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>电子邮箱</Text>
-                  <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="name@example.com"
-                      placeholderTextColor="#A0A0A0"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      value={formParams.email}
-                      onChangeText={(text) => onChangeText(text, 'email')}
-                    />
-                  </View>
-                  {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-                </View>
-
-                {/* 2. 用户名输入 */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>用户名</Text>
-                  <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="英文或数字，至少5位"
-                      placeholderTextColor="#A0A0A0"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      value={formParams.username}
-                      onChangeText={(text) => onChangeText(text, 'username')}
-                    />
-                  </View>
-                  {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
-                </View>
-
-                {/* 3. 密码输入 */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>密码</Text>
-                  <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="设置登录密码"
-                      placeholderTextColor="#A0A0A0"
-                      autoCapitalize="none"
-                      secureTextEntry={hidePassword}
-                      value={formParams.password}
-                      textContentType="newPassword" // iOS 优化
-                      onChangeText={(text) => onChangeText(text, 'password')}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeIcon}
-                      onPress={() => setHidePassword(!hidePassword)}
-                      hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                    >
-                      <MaterialCommunityIcons
-                        name={hidePassword ? 'eye-off' : 'eye-outline'}
-                        size={22}
-                        color="#8E8E93"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-                </View>
-
-                {/* 4. 确认密码 */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>确认密码</Text>
-                  <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="再次输入密码"
-                      placeholderTextColor="#A0A0A0"
-                      autoCapitalize="none"
-                      secureTextEntry={hidePassword} // 跟随主密码显示状态
-                      value={formParams.confirmPassword}
-                      textContentType="newPassword"
-                      onChangeText={(text) => onChangeText(text, 'confirmPassword')}
-                    />
-                  </View>
-                  {errors.confirmPassword && (
-                    <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-                  )}
-                </View>
-
-                {/* 注册按钮 */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleSubmit}
-                  style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
-                  disabled={loading}
-                >
-                  <Text style={styles.submitBtnText}>注 册</Text>
-                </TouchableOpacity>
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>电子邮箱</Text>
+              <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="name@example.com"
+                  placeholderTextColor="#A0A0A0"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={formParams.email}
+                  onChangeText={(text) => onChangeText(text, 'email')}
+                />
               </View>
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
-            {/* --- 底部切换区域 --- */}
-            <View style={styles.footer}>
-              <View style={styles.footerContent}>
-                <Text style={styles.footerText}>已经拥有帐户了？</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>用户名</Text>
+              <View style={[styles.inputWrapper, errors.username && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="英文或数字，至少5位"
+                  placeholderTextColor="#A0A0A0"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={formParams.username}
+                  onChangeText={(text) => onChangeText(text, 'username')}
+                />
+              </View>
+              {errors.username && <Text style={styles.errorText}>{errors.username}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>密码</Text>
+              <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="设置登录密码"
+                  placeholderTextColor="#A0A0A0"
+                  autoCapitalize="none"
+                  secureTextEntry={hidePassword}
+                  value={formParams.password}
+                  textContentType="newPassword"
+                  onChangeText={(text) => onChangeText(text, 'password')}
+                />
                 <TouchableOpacity
-                  style={styles.footerLinkBtn}
-                  onPress={() => setSelected('signIn')}
+                  style={styles.eyeIcon}
+                  onPress={() => setHidePassword(!hidePassword)}
                   hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                 >
-                  <Text style={styles.footerLinkText}>去登录</Text>
-                  <MaterialCommunityIcons name="arrow-right" size={18} color="#629BF0" />
+                  <MaterialCommunityIcons
+                    name={hidePassword ? 'eye-off' : 'eye-outline'}
+                    size={22}
+                    color="#8E8E93"
+                  />
                 </TouchableOpacity>
               </View>
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
-          </KeyboardAwareScrollView>
 
-          {/* Loading 状态覆盖层 */}
-          {loading && <Loading />}
-        </SafeAreaView>
-      </SafeAreaProvider>
-    </KeyboardProvider>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>确认密码</Text>
+              <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="再次输入密码"
+                  placeholderTextColor="#A0A0A0"
+                  autoCapitalize="none"
+                  secureTextEntry={hidePassword}
+                  value={formParams.confirmPassword}
+                  textContentType="newPassword"
+                  onChangeText={(text) => onChangeText(text, 'confirmPassword')}
+                />
+              </View>
+              {errors.confirmPassword && (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              )}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleSubmit}
+              style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+              disabled={loading}
+            >
+              <Text style={styles.submitBtnText}>注 册</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <View style={styles.footerContent}>
+            <Text style={styles.footerText}>已经拥有帐户了？</Text>
+            <TouchableOpacity
+              style={styles.footerLinkBtn}
+              onPress={() => setSelected('signIn')}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+              <Text style={styles.footerLinkText}>去登录</Text>
+              <MaterialCommunityIcons name="arrow-right" size={18} color="#629BF0" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAwareScrollView>
+
+      {loading && <Loading />}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: {
+    flex: 1, // 关键：确保视图撑满父级的 absolute 区域
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: 20,
-    justifyContent: 'space-between', // 关键：将 Header、Content、Footer 分开排列
+    justifyContent: 'space-between',
   },
   header: {
     height: 50,
@@ -255,7 +223,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   mainContent: {
-    flex: 1, // 占据剩余空间
+    flex: 1,
     paddingTop: 20,
     paddingBottom: 40,
   },
@@ -282,7 +250,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA', // 更现代的浅灰背景
+    backgroundColor: '#F8F9FA',
     borderRadius: 12,
     height: 54,
     paddingHorizontal: 16,
@@ -316,7 +284,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 24,
-    // 增加投影增加层次感
     shadowColor: '#629BF0',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -342,7 +309,7 @@ const styles = StyleSheet.create({
   footerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8, // 增加点击区域
+    padding: 8,
   },
   footerText: {
     fontSize: 14,

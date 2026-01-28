@@ -10,7 +10,7 @@ import Fuse from 'fuse.js'
 
 import apiService from '@/utils/request'
 import { useSession } from '@/utils/ctx'
-import { decryptField, getSecureDataWithBiometrics } from '@/utils/crypto'
+import { decryptField, getSecureData } from '@/utils/crypto'
 
 import RecycleBin from '@/components/passwords/RecycleBin'
 import PasswordGrid from '@/components/passwords/PasswordGrid'
@@ -70,7 +70,7 @@ export default function Index() {
     const checkBiometricUnlock = async () => {
       // 如果有登录态但内存(store)里没有 masterKey，则尝试通过生物识别解锁数据
       if (session && !masterKey) {
-        const secureData = await getSecureDataWithBiometrics()
+        const secureData = await getSecureData()
         if (secureData) {
           useAuthStore.getState().setMasterKey(secureData.masterKey)
           useAuthStore.getState().setSystemPepper(secureData.systemPepper)

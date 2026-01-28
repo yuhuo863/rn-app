@@ -2,8 +2,7 @@ import { Link } from 'expo-router'
 import { useState } from 'react'
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
-import { KeyboardProvider, KeyboardAwareScrollView } from 'react-native-keyboard-controller'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { useSession } from '@/utils/ctx'
 import Loading from '@/components/shared/Loading'
 
@@ -44,114 +43,108 @@ export default function SignIn(props) {
   }
 
   return (
-    <KeyboardProvider>
-      <SafeAreaProvider>
-        {/* 使用 SafeAreaView 确保不被刘海遮挡 */}
-        <SafeAreaView style={styles.safeArea}>
-          <KeyboardAwareScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            bottomOffset={20}
-          >
-            {/* 顶部操作区 */}
-            <View style={styles.header}>
-              {/* 这里 Link 应该包裹 View 或 Text，保持点击区域 */}
-              <Link href="../" asChild>
-                <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Text style={styles.cancelText}>跳过</Text>
-                </TouchableOpacity>
-              </Link>
+    <View style={styles.container}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
+      >
+        <View style={styles.header}>
+          <Link href="../" asChild>
+            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.cancelText}>跳过</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+
+        <View style={styles.mainContent}>
+          <Text style={styles.title}>欢迎回来</Text>
+
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>账号</Text>
+              <View style={[styles.inputWrapper, errors.login && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="请输入用户名或邮箱"
+                  placeholderTextColor="#A0A0A0"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={formParams.login}
+                  onChangeText={(text) => onChangeText(text, 'login')}
+                />
+              </View>
+              {errors.login && <Text style={styles.errorText}>{errors.login}</Text>}
             </View>
 
-            {/* 主内容区：使用 Flex 布局垂直居中或顶部排列 */}
-            <View style={styles.mainContent}>
-              <Text style={styles.title}>欢迎回来</Text>
-
-              <View style={styles.form}>
-                {/* 用户名输入 */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>账号</Text>
-                  <View style={[styles.inputWrapper, errors.login && styles.inputError]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="请输入用户名或邮箱"
-                      placeholderTextColor="#A0A0A0"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      value={formParams.login}
-                      onChangeText={(text) => onChangeText(text, 'login')}
-                    />
-                  </View>
-                  {errors.login && <Text style={styles.errorText}>{errors.login}</Text>}
-                </View>
-
-                {/* 密码输入 */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>密码</Text>
-                  <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="请输入密码"
-                      placeholderTextColor="#A0A0A0"
-                      autoCapitalize="none"
-                      secureTextEntry={hidePassword}
-                      value={formParams.password}
-                      onChangeText={(text) => onChangeText(text, 'password')}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeIcon}
-                      onPress={() => setHidePassword(!hidePassword)}
-                    >
-                      <MaterialCommunityIcons
-                        name={hidePassword ? 'eye-off' : 'eye-outline'}
-                        size={24}
-                        color="#999"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-                </View>
-
-                {/* 登录按钮 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>密码</Text>
+              <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="请输入密码"
+                  placeholderTextColor="#A0A0A0"
+                  autoCapitalize="none"
+                  secureTextEntry={hidePassword}
+                  value={formParams.password}
+                  onChangeText={(text) => onChangeText(text, 'password')}
+                />
                 <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleSubmit}
-                  style={styles.submitBtn}
-                  disabled={loading}
+                  style={styles.eyeIcon}
+                  onPress={() => setHidePassword(!hidePassword)}
                 >
-                  <Text style={styles.submitBtnText}>登 录</Text>
+                  <MaterialCommunityIcons
+                    name={hidePassword ? 'eye-off' : 'eye-outline'}
+                    size={24}
+                    color="#999"
+                  />
                 </TouchableOpacity>
               </View>
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             </View>
 
-            {/* 底部切换区：自然流布局，不需要 absolute */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>新用户请从这里开始</Text>
-              <TouchableOpacity style={styles.footerLinkBtn} onPress={() => setSelected('signUp')}>
-                <Text style={styles.footerLinkText}>注册账号</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color="#629BF0" />
-              </TouchableOpacity>
-            </View>
-          </KeyboardAwareScrollView>
+            <TouchableOpacity
+              onPress={() => setSelected('forgotPassword')}
+              style={styles.forgotPasswordContainer}
+            >
+              <Text style={styles.forgotPasswordText}>忘记主密码？</Text>
+            </TouchableOpacity>
 
-          {/* Loading 放在最外层，使用绝对定位覆盖 */}
-          {loading && <Loading message="正在构建安全环境..." />}
-        </SafeAreaView>
-      </SafeAreaProvider>
-    </KeyboardProvider>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleSubmit}
+              style={styles.submitBtn}
+              disabled={loading}
+            >
+              <Text style={styles.submitBtnText}>登 录</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>新用户请从这里开始</Text>
+          <TouchableOpacity style={styles.footerLinkBtn} onPress={() => setSelected('signUp')}>
+            <Text style={styles.footerLinkText}>注册账号</Text>
+            <MaterialCommunityIcons name="arrow-right" size={20} color="#629BF0" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAwareScrollView>
+
+      {loading && <Loading message="正在构建安全环境..." />}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: {
+    flex: 1, // 确保占满父级容器
+    // backgroundColor: '#fff', // 背景色由父级控制，这里可省略
   },
   scrollContent: {
-    flexGrow: 1, // 关键：允许内容撑满屏幕，即使内容很少
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: 20,
-    justifyContent: 'space-between', // 关键：让头部、内容、底部分布
+    justifyContent: 'space-between',
   },
   header: {
     height: 50,
@@ -164,8 +157,8 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   mainContent: {
-    flex: 1, // 占据中间剩余空间
-    justifyContent: 'center', // 垂直居中
+    flex: 1,
+    justifyContent: 'center',
     paddingBottom: 40,
   },
   title: {
@@ -190,7 +183,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA', // 浅灰背景，比只有下划线更现代
+    backgroundColor: '#F5F7FA',
     borderRadius: 12,
     height: 56,
     paddingHorizontal: 16,
@@ -219,7 +212,7 @@ const styles = StyleSheet.create({
   submitBtn: {
     height: 56,
     backgroundColor: '#629BF0',
-    borderRadius: 28, // 全圆角
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 16,
@@ -256,5 +249,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#629BF0',
     marginRight: 2,
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#629BF0',
+    fontWeight: '500',
   },
 })

@@ -62,6 +62,7 @@ export default function ChangePassword() {
         Alert.alert('错误', '用户信息已失效，请重新登录')
         return
       }
+      // 1. 获取所有密码项数据(包括未删除的和回收站中的所有密码)
       const allData = await apiService.get('/password/list-all')
 
       const allItems = allData.passwords || []

@@ -11,6 +11,7 @@ import {
   BackHandler,
   Animated,
   Easing,
+  Dimensions,
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -36,7 +37,7 @@ const COLORS = {
   border: '#E5E5EA',
   selectedBg: '#FFF5EB',
 }
-
+const SCREEN_WIDTH = Dimensions.get('window').width
 // --- 辅助函数 ---
 const getRemainingDays = (deletedAt) => {
   const deleteDate = new Date(deletedAt)
@@ -55,15 +56,16 @@ const getHourglassIcon = (days) => {
 }
 
 // 将 SwipeableItem 移出主组件，并使用 memo 优化 ---
+// ... 保持原有引用不变
+
 const SwipeableItem = memo(
   ({ item, isSelectionMode, isSelected, onRestore, onLongPress, onPress, theme, masterKey }) => {
     // 动画值引用
     const translateX = useRef(new Animated.Value(0)).current
     const opacity = useRef(new Animated.Value(1)).current
-    const itemHeight = useRef(new Animated.Value(110)).current
-    const marginBottom = useRef(new Animated.Value(12)).current
+    const itemHeight = useRef(new Animated.Value(110)).current // 初始高度需与实际卡片高度一致
+    const marginBottom = useRef(new Animated.Value(12)).current // 初始 margin
 
-    // 使用 useMemo 缓存昂贵的计算，防止重渲染时卡顿
     const remaining = useMemo(() => getRemainingDays(item.deletedAt), [item.deletedAt])
     const decryptedTitle = useMemo(
       () => decryptField(item.title, masterKey),
@@ -77,38 +79,36 @@ const SwipeableItem = memo(
     }, [remaining])
 
     const handleRestore = () => {
-      // 组合动画：滑动 -> 消失 -> 高度塌陷
+      // 第一阶段：位移和透明度（Native Driver）
+      // 作用于【内层】View
       Animated.parallel([
         Animated.timing(translateX, {
-          toValue: 500,
-          duration: 350,
+          toValue: SCREEN_WIDTH,
+          duration: 250,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: false,
+          useNativeDriver: true, // 必须为 true
         }),
         Animated.timing(opacity, {
           toValue: 0,
-          duration: 300,
-          useNativeDriver: false,
+          duration: 200,
+          useNativeDriver: true, // 必须为 true
         }),
-        Animated.sequence([
-          Animated.delay(150),
+      ]).start(({ finished }) => {
+        if (finished) {
+          // 第二阶段：高度塌陷（JS Driver）
+          // 作用于【外层】View
           Animated.parallel([
             Animated.timing(itemHeight, {
               toValue: 0,
               duration: 250,
-              useNativeDriver: false,
+              useNativeDriver: false, // 必须为 false，因为 Native 不支持 height
             }),
             Animated.timing(marginBottom, {
               toValue: 0,
               duration: 250,
-              useNativeDriver: false,
+              useNativeDriver: false, // 必须为 false
             }),
-          ]),
-        ]),
-      ]).start(({ finished }) => {
-        if (finished) {
-          // 在下一帧调用父组件更新，避免动画被 React 渲染打断
-          requestAnimationFrame(() => {
+          ]).start(() => {
             onRestore(item)
           })
         }
@@ -116,78 +116,84 @@ const SwipeableItem = memo(
     }
 
     return (
+      // 1. 外层 View：控制布局 (Height/Margin) - 由 JS 驱动
       <Animated.View
         style={{
-          transform: [{ translateX }],
-          opacity,
           height: itemHeight,
           marginBottom: marginBottom,
-          overflow: 'hidden',
+          overflow: 'hidden', // 关键：确保高度缩小时内容被裁剪
         }}
       >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onLongPress={() => onLongPress(item.id)}
-          onPress={() => onPress(item)}
-          style={[
-            styles.card,
-            { backgroundColor: theme.card, borderColor: theme.border },
-            isSelected && [
-              styles.cardSelected,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ],
-          ]}
+        {/* 2. 内层 View：控制视觉 (Transform/Opacity) - 由 Native 驱动 */}
+        <Animated.View
+          style={{
+            transform: [{ translateX }],
+            opacity,
+          }}
         >
-          <View style={styles.cardInner}>
-            {/* 多选框区域 - 仅在模式开启时占据空间 */}
-            {isSelectionMode && (
-              <View style={styles.checkboxContainer}>
-                <MaterialCommunityIcons
-                  name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
-                  size={24}
-                  color={isSelected ? COLORS.primary : '#C5C5C5'}
-                />
-              </View>
-            )}
-
-            <View style={styles.cardContent}>
-              <View style={styles.rowTop}>
-                <View style={[styles.iconBox, { backgroundColor: theme.background }]}>
-                  <FontAwesome
-                    name={item.category?.icon || 'lock'}
-                    size={20}
-                    color={item.category?.color || '#fff'}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onLongPress={() => onLongPress(item.id)}
+            onPress={() => onPress(item)}
+            style={[
+              styles.card,
+              { backgroundColor: theme.card, borderColor: theme.border },
+              isSelected && [
+                styles.cardSelected,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ],
+            ]}
+          >
+            <View style={styles.cardInner}>
+              {isSelectionMode && (
+                <View style={styles.checkboxContainer}>
+                  <MaterialCommunityIcons
+                    name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                    size={24}
+                    color={isSelected ? COLORS.primary : '#C5C5C5'}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={1}>
-                    {decryptedTitle || '⚠️ 数据已失效 (密钥不匹配)'}
+              )}
+
+              <View style={styles.cardContent}>
+                <View style={styles.rowTop}>
+                  <View style={[styles.iconBox, { backgroundColor: theme.background }]}>
+                    <FontAwesome
+                      name={item.category?.icon || 'lock'}
+                      size={20}
+                      color={item.category?.color || '#fff'}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={1}>
+                      {decryptedTitle || '⚠️ 数据已失效 (密钥不匹配)'}
+                    </Text>
+                    <Text style={[styles.categoryText, { color: theme.textSecondary }]}>
+                      {item.category?.name || '未分类'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.divider, { backgroundColor: theme.divider || '#F0F0F0' }]} />
+
+                <View style={styles.rowBottom}>
+                  <Text style={{ fontSize: 11, color: statusColor }}>
+                    <FontAwesome name={getHourglassIcon(remaining)} size={12} color={statusColor} />
+                    &nbsp;&nbsp;{remaining === 0 ? '即将清理' : `剩余 ${remaining} 天`}
                   </Text>
-                  <Text style={[styles.categoryText, { color: theme.textSecondary }]}>
-                    {item.category?.name || '未分类'}
-                  </Text>
+                  {!isSelectionMode && (
+                    <TouchableOpacity
+                      onPress={handleRestore}
+                      hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                    >
+                      <FontAwesome name="undo" size={20} color={theme.iconColor} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-
-              <View style={[styles.divider, { backgroundColor: theme.divider || '#F0F0F0' }]} />
-
-              <View style={styles.rowBottom}>
-                <Text style={{ fontSize: 11, color: statusColor }}>
-                  <FontAwesome name={getHourglassIcon(remaining)} size={12} color={statusColor} />
-                  &nbsp;&nbsp;{remaining === 0 ? '即将清理' : `剩余 ${remaining} 天`}
-                </Text>
-                {!isSelectionMode && (
-                  <TouchableOpacity
-                    onPress={handleRestore}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                  >
-                    <FontAwesome name="undo" size={20} color={theme.iconColor} />
-                  </TouchableOpacity>
-                )}
-              </View>
             </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </Animated.View>
       </Animated.View>
     )
   },
@@ -430,6 +436,13 @@ export default function TrashScreen() {
           ListEmptyComponent={!loading && <CommonEmptyState />}
           // 这里的 extraData 确保当 Set 发生变化时，FlatList 知道需要重新检查 renderItem
           extraData={[selectedIds, isSelectionMode]} // 确保每次渲染时都带上最新的选中状态
+          getItemLayout={(
+            data,
+            index, // 计算每个条目的布局信息，用于优化性能
+          ) =>
+            // 卡片高度是 110，marginBottom 是 12，总共 122
+            ({ length: 122, offset: 122 * index, index })
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

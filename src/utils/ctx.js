@@ -57,15 +57,20 @@ export function SessionProvider({ children }) {
           try {
             const data = await apiService.post('/auth/register', formParams)
             await initializeSession(data, formParams.password)
-            Alert.alert('提示', '您已经注册成功！', [
-              {
-                text: 'OK',
-                onPress: () => {
-                  setLoading(false)
-                  router.navigate('/passwords')
+            Alert.alert(
+              '⚠️ 极其重要',
+              '我们无法找回您的主密码。\n\n一旦丢失，所有数据将永久无法恢复！\n\n请务必现在就进行物理备份（如抄在纸上）。',
+              [
+                {
+                  text: '我已备份并牢记',
+                  onPress: () => {
+                    setLoading(false)
+                    router.navigate('/passwords')
+                  },
                 },
-              },
-            ])
+              ],
+              { cancelable: false },
+            )
           } catch (err) {
             Alert.alert('错误', err.data.errors[0], [
               {
